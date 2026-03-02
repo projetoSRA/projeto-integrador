@@ -1,0 +1,492 @@
+/* ================= FONTES E BASE ================= */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+* {
+  margin: 0;
+  padding: 0;
+  outline: none;
+  box-sizing: border-box;
+  font-family: 'Inter', sans-serif;
+}
+
+body {
+  background: linear-gradient(135deg, #0e1217, #1f2a37);
+  background-size: 400% 400%;
+  animation: gradientAnimation 15s ease infinite;
+  color: #f0f4f8;
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+@keyframes gradientAnimation {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
+
+/* ================= NAVBAR ================= */
+nav {
+  background: rgba(255, 255, 255, 0.05);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 0 30px rgba(0, 179, 255, 0.08);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 70px;
+  padding: 0 100px;
+  position: relative;
+}
+
+nav .logo {
+  color: #00e0ff;
+  font-size: 30px;
+  font-weight: 600;
+  letter-spacing: -1px;
+}
+
+nav .logo a {
+  text-decoration: none;
+  color: inherit;
+}
+
+nav .nav-items {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex: 1;
+  padding-left: 40px;
+}
+
+nav .nav-items li {
+  list-style: none;
+  padding: 0 15px;
+}
+
+nav .nav-items li a {
+  color: #e2e8f0;
+  font-size: 18px;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+nav .nav-items li a:hover {
+  color: #00d0c0;
+}
+
+nav .menu-icon,
+nav .cancel-icon {
+  width: 40px;
+  display: none;
+  justify-content: center;
+  align-items: center;
+  font-size: 18px;
+  color: #f0f4f8;
+  cursor: pointer;
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  left: 20px;
+  z-index: 100;
+}
+
+/* --- Responsividade da Navbar --- */
+@media (max-width: 1024px) {
+  nav { padding: 0 50px; }
+}
+
+@media (max-width: 768px) {
+  nav {
+    padding: 0 20px;
+    justify-content: space-between;
+  }
+
+  nav .logo {
+    font-size: 24px;
+  }
+
+  nav .menu-icon {
+    display: flex;
+    left: 15px;
+  }
+
+  nav .nav-items {
+    position: fixed;
+    z-index: 99;
+    top: 70px;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: #171c26;
+    flex-direction: column;
+    justify-content: start;
+    align-items: center;
+    text-align: center;
+    padding-top: 40px;
+    transition: left 0.3s ease;
+  }
+
+  nav .nav-items.active { left: 0; }
+
+  nav .nav-items li {
+    margin: 20px 0;
+  }
+
+  nav .nav-items li a {
+    font-size: 20px;
+  }
+
+  .profile-container {
+    right: 20px;
+  }
+}
+
+/* ================= PERFIL / DROPDOWN ================= */
+.profile-container {
+  position: absolute;
+  top: 55%;
+  right: 40px;
+  transform: translateY(-50%);
+  z-index: 1000;
+}
+
+.profile-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  cursor: pointer;
+  object-fit: cover;
+  border: 2px solid #00e0ff;
+  transition: transform 0.2s ease;
+}
+
+.profile-icon:hover { transform: scale(1.05); }
+
+.dropdown-menu {
+  display: none;
+  position: absolute;
+  top: calc(100% + 15px);
+  right: 0;
+  background-color: #171c26;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.6);
+  width: 270px;
+  overflow: hidden;
+}
+
+.dropdown-menu.show { display: block; }
+
+.profile-info {
+  padding: 16px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  text-align: center;
+  background-color: #252d3a;
+}
+
+.profile-info img {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  border: 2px solid #00e0ff;
+  margin-bottom: 8px;
+}
+
+.profile-info h3 {
+  color: #00e0ff;
+  font-size: 15px;
+}
+
+.profile-info p {
+  color: #a0a6b0;
+  font-size: 13px;
+  margin: 0;
+}
+
+.dropdown-menu a {
+  display: block;
+  padding: 12px 18px;
+  color: #f0f4f8;
+  text-decoration: none;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  transition: background 0.2s ease;
+}
+
+.dropdown-menu a:hover {
+  background-color: #2d3748;
+  color: #00d0c0;
+}
+
+/* ================= CONTEÚDO ================= */
+.content {
+  position: relative;
+  margin: 40px auto;
+  width: 90%;
+  max-width: 1200px;
+  text-align: center;
+}
+
+.content header,
+.content .text {
+  font-size: 30px;
+  font-weight: 700;
+  color: #b2f5ea;
+}
+
+/* ================= SLIDER ================= */
+.container.swiper {
+  width: 100%;
+  max-width: 100%;
+  padding: 0 15px;
+}
+
+.wrapper {
+  padding: 20px 10px;
+  margin: 0 auto 35px;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+}
+
+.swiper-slide {
+  height: auto !important;
+  display: flex;
+  align-items: stretch;
+  scroll-snap-align: center;
+}
+
+.wrapper .card {
+  background: #252d3a;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border-radius: 20px;
+  box-shadow: 0 0 20px rgba(0, 200, 255, 0.08);
+  transition: transform 0.3s ease;
+  width: 100%;
+  max-width: 350px;
+  margin: 0 auto;
+}
+
+.wrapper .card:hover {
+  transform: translateY(-10px);
+}
+
+.card .card-image img {
+  width: 100%;
+  border-radius: 20px 20px 0 0;
+  object-fit: cover;
+  aspect-ratio: 16 / 9;
+}
+
+.card .card-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  padding: 15px 20px 25px;
+}
+
+.card .card-title {
+  color: #00e0ff;
+  font-size: 1.25rem;
+  font-weight: 700;
+  margin-bottom: 10px;
+}
+
+.card .card-text {
+  color: #e2e8f0;
+  font-size: 0.95rem;
+  line-height: 1.6;
+  margin-bottom: 20px;
+}
+
+.card .card-button {
+  color: #101015;
+  padding: 10px 20px;
+  border-radius: 30px;
+  font-size: 0.81rem;
+  font-weight: 600;
+  text-decoration: none;
+  background: linear-gradient(90deg, #00d0c0, #0099ff);
+  box-shadow: 0 5px 18px rgba(0, 200, 255, 0.3);
+  transition: all 0.3s ease;
+  white-space: nowrap;
+}
+
+.card .card-button:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(0, 200, 255, 0.4);
+}
+
+/* ===== SETAS DO SLIDER ===== */
+.wrapper .swiper-button-prev,
+.wrapper .swiper-button-next {
+  color: #00e0ff;
+  font-size: 22px;
+  transition: color 0.3s ease;
+}
+
+.wrapper .swiper-button-prev:hover,
+.wrapper .swiper-button-next:hover {
+  color: #00d0c0;
+}
+
+@media (max-width: 768px) {
+  .wrapper {
+    padding: 10px 0;
+  }
+
+  .card {
+    max-width: 90%;
+  }
+
+  .card .card-title {
+    font-size: 1.1rem;
+  }
+
+  .card .card-text {
+    font-size: 0.9rem;
+  }
+
+  .card .card-button {
+    font-size: 0.8rem;
+    padding: 8px 16px;
+  }
+}
+/* ===== Ajuste Desktop: 1 card centralizado e setas visíveis ===== */
+@media (min-width: 1025px) {
+  .wrapper {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    padding: 40px 0;
+  }
+
+  .swiper-slide {
+    flex: 0 0 28.33% !important; /* mostra 1 card de cada vez com espaço lateral */
+    max-width: 28.33% !important;
+    display: flex;
+    justify-content: center;
+  }
+
+  .wrapper .card {
+    width: 90%;
+    max-width: 400px;
+    margin: 0 25px; /* espaço entre as setas */
+  }
+
+  .card .card-image img {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    border-radius: 20px 20px 0 0;
+    object-fit: cover;
+  }
+
+  /* Posiciona as setas de forma mais visível */
+  .swiper-button-prev,
+  .swiper-button-next {
+    color: #00e0ff;
+    font-size: 26px;
+    transform: translateY(-50%);
+  }
+
+  .swiper-button-prev {
+    left: 5%;
+  }
+
+  .swiper-button-next {
+    right: 5%;
+  }
+}
+
+
+/* ================= SEÇÃO DE INFORMAÇÕES ================= */
+.info-section {
+  padding: 50px 20px;
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 40px;
+}
+
+.info-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 40px;
+  border-radius: 20px;
+  background-color: #1a222c;
+  box-shadow: 0 8px 30px rgba(0, 0, 0, 0.4);
+  transition: transform 0.3s ease;
+}
+
+.info-block:hover {
+  transform: translateY(-8px);
+}
+
+.info-block h2 {
+  font-size: 1.8rem;
+  color: #f0f4f8;
+  margin-bottom: 15px;
+  font-weight: 700;
+}
+
+.info-block p {
+  font-size: 1rem;
+  color: #a0a6b0;
+  line-height: 1.6;
+}
+
+@media (max-width: 992px) {
+  .info-section {
+    grid-template-columns: 1fr;
+    gap: 30px;
+    padding: 30px 15px;
+  }
+}
+
+@media (max-width: 576px) {
+  .info-block {
+    padding: 30px 20px;
+  }
+
+  .info-block h2 {
+    font-size: 1.5rem;
+  }
+}
+@media (max-width: 768px) {
+  nav {
+    justify-content: center;
+    padding: 0 15px;
+  }
+
+  nav .logo {
+    text-align: center;
+    margin: 0 auto;
+    font-size: 26px;
+  }
+
+  .menu-icon {
+    position: absolute;
+    left: 15px;
+  }
+
+  .profile-container {
+    position: absolute;
+    right: 15px;
+  }
+}
+
+/* Remove as setas do slider no formato de celular */
+@media (max-width: 768px) {
+  .wrapper .swiper-button-prev,
+  .wrapper .swiper-button-next {
+    display: none !important;
+  }
+}
+.swiper-button-prev,
+.swiper-button-next {
+  display: none !important;
+}
