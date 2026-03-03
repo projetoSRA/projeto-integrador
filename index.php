@@ -11,7 +11,7 @@
   <div class="container">
     <div class="panels-container">
       <div class="panel left-panel">
-        <img src="../tcc/frontend/img/log.svg" class="image" alt="" />
+        <img src="frontend/img/log.svg" class="image" alt="" />
         <div class="content">
           <h3>Novo por aqui?</h3>
           <p>Faça seu login e fique por dentro de tudo!</p>
@@ -21,7 +21,7 @@
 
     <div class="forms-container">
       <div class="signin-signup">
-        <form class="sign-in-form formLogin" action="../tcc/backend/php/login.php" method="post">
+        <form class="sign-in-form formLogin" action="backend/php/login.php" method="post">
           <h2 class="title">Login</h2>
 
           <!-- SELECT DE PERFIL -->
@@ -57,6 +57,6 @@
     </div>
   </div>
 
-  <script src="../tcc/frontend/js/index.js"></script>
+  <script src="frontend/js/index.js"></script>
 </body>
 </html>
