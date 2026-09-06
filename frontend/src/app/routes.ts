@@ -6,6 +6,8 @@ import DashboardEmpresa from "./pages/DashboardEmpresa";
 import HorasAMS from "./pages/HorasAMS";
 import Eventos from "./pages/Eventos";
 import Certificados from "./pages/Certificados"; // 👈 ADICIONE ISSO
+import CoordenacaoAlunos from "./pages/CoordenacaoAlunos";
+import CoordenacaoAlunoDetalhe from "./pages/CoordenacaoAlunoDetalhe";
 
 export const router = createBrowserRouter([
   {
@@ -19,6 +21,14 @@ export const router = createBrowserRouter([
   {
     path: "/coordenacao",
     Component: DashboardCoordenacao,
+  },
+  {
+    path: "/coordenacao/alunos",
+    Component: CoordenacaoAlunos,
+  },
+  {
+    path: "/coordenacao/alunos/:idAluno",
+    Component: CoordenacaoAlunoDetalhe,
   },
   {
     path: "/empresa",

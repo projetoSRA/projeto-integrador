@@ -8,8 +8,9 @@ import { Button } from "../components/ui/button";
 import { GraduationCap, Building2, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { Toaster } from "../components/ui/sonner";
-import { validateRM, validateLogin, validateCNPJ, validatePassword } from "../utils/validators";
+import { validateMatriculaAluno, validateLogin, validateCNPJ, validatePassword } from "../utils/validators";
 import { authenticateUser } from "../utils/auth";
+import { saveSession } from "../utils/api";
 
 export default function Login() {
   const navigate = useNavigate();
@@ -37,8 +38,8 @@ if (userType === "empresa") {
     const newErrors: { identifier?: string; password?: string } = {};
 
     if (userType === "aluno") {
-      if (!validateRM(identifier)) {
-        newErrors.identifier = "RM deve ter exatamente 5 números";
+      if (!validateMatriculaAluno(identifier)) {
+        newErrors.identifier = "Informe um RM (5 números) ou RA (6 a 12 números) válido";
         hasError = true;
       }
     } else if (userType === "coordenacao") {
@@ -78,7 +79,7 @@ if (userType === "empresa") {
 
       if (result.success && result.user) {
         toast.success(result.message);
-        localStorage.setItem("user", JSON.stringify(result.user));
+        saveSession(result.user, result.token);
 
         if (userType === "aluno") navigate("/aluno");
         else if (userType === "coordenacao") navigate("/coordenacao");
@@ -93,9 +94,9 @@ if (userType === "empresa") {
     }
   };
 
-  const handleRMInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleMatriculaInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/\D/g, "");
-    e.target.value = value.slice(0, 5);
+    e.target.value = value.slice(0, 12);
   };
 
   const handleCNPJInput = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -124,7 +125,7 @@ if (userType === "empresa") {
         <span className="size-3 rounded-full bg-white/15" />
       </div>
 
-      <div className="w-full lg:w-1/2 flex items-center justify-center px-10">
+      <div className="w-full lg:w-1/2 flex items-center justify-center px-6 sm:px-10">
         <div className="w-full max-w-sm">
           <div className="mb-10">
   <h1 className="text-5xl font-bold text-white tracking-wide">
@@ -163,14 +164,14 @@ if (userType === "empresa") {
             <TabsContent value="alunos">
               <form onSubmit={(e) => handleLogin("aluno", e)} className="space-y-6">
                 <div>
-                  <Label className="text-white/50 mb-2 block">RM</Label>
+                  <Label className="text-white/50 mb-2 block">RM ou RA</Label>
                   <Input
                     name="identifier"
                     type="text"
-                    maxLength={5}
-                    onChange={handleRMInput}
+                    maxLength={12}
+                    onChange={handleMatriculaInput}
                     className="h-12 rounded-lg bg-[#1e2227] border-white/10 text-white placeholder:text-white/35"
-                    placeholder="12345"
+                    placeholder="RM (5 dígitos) ou RA"
                     required
                   />
                 </div>

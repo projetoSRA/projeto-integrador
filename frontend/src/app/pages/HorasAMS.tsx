@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { User } from "../utils/auth";
+import { apiFetch } from "../utils/api";
 import AlunoLayout, {
   glassCardStyle
 } from "../components/AlunoLayout";
@@ -61,7 +62,7 @@ export default function HorasAMS() {
       try {
         setLoading(true);
 
-        const response = await fetch(`${API_URL}/horas/aluno/${user.id}`);
+        const response = await apiFetch(`${API_URL}/horas/aluno/${user.id}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -168,7 +169,7 @@ export default function HorasAMS() {
                     Faltam {horasRestantes}h para completar a carga total.
                   </p>
 
-                  <div className="grid grid-cols-3 gap-3 mt-6">
+                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-6">
                     <div className="rounded-xl bg-white/10 p-4 text-center">
                       <p className="text-white/70 text-sm">Eventos</p>
                       <p className="text-white text-xl font-semibold">

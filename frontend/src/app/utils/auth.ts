@@ -4,6 +4,11 @@ export type User = {
   identifier: string;
   type: "aluno" | "coordenacao" | "empresa";
   foto_perfil_url?: string;
+  rm?: string | null;
+  ra?: string | null;
+  nivel_ensino?: "MEDIO" | "FACULDADE" | null;
+  curso?: string | null;
+  serie_semestre?: string | null;
 };
 
 const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";

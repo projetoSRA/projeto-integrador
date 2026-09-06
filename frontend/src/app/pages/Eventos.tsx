@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { User } from "../utils/auth";
+import { apiFetch } from "../utils/api";
 import AlunoLayout, { glassCardStyle } from "../components/AlunoLayout";
 import { panelStyle, cardStyle, buttonGlass } from "../../styles/uiStyles";
 import { Mic2 } from "lucide-react";
@@ -68,7 +69,7 @@ export default function Eventos() {
 
     setUser(parsedUser);
 
-    fetch(`http://localhost:3000/aluno/horas/${parsedUser.identifier}`)
+    apiFetch(`${API_URL}/horas/aluno/${parsedUser.id}`)
     .then(res => res.json())
     .then(data => setHoras(data.horas))
     .catch(() => setHoras(0));
@@ -82,8 +83,8 @@ export default function Eventos() {
         setLoading(true);
 
         const [eventosResponse, inscricoesResponse] = await Promise.all([
-          fetch(`${API_URL}/eventos`),
-          fetch(`${API_URL}/eventos/inscricoes/aluno/${user.id}`),
+          apiFetch(`${API_URL}/eventos`),
+          apiFetch(`${API_URL}/eventos/inscricoes/aluno/${user.id}`),
         ]);
 
         const eventosData = await eventosResponse.json();
@@ -113,7 +114,7 @@ export default function Eventos() {
     if (!user) return;
 
     try {
-      const response = await fetch(`${API_URL}/eventos/${idEvento}/inscrever`, {
+      const response = await apiFetch(`${API_URL}/eventos/${idEvento}/inscrever`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

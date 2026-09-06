@@ -3,6 +3,7 @@ import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { User } from "../utils/auth";
+import { apiFetch } from "../utils/api";
 import AlunoLayout, { glassCardStyle } from "../components/AlunoLayout";
 import { panelStyle, cardStyle, buttonGlass } from "../../styles/uiStyles";
 import {
@@ -21,6 +22,7 @@ type ArquivoAluno = {
   tipo: TipoArquivo;
   titulo: string;
   quantidadeHoras: number;
+  horasAprovadas: number;
   dataEmissao: string;
   arquivoNome: string;
   arquivoUrl: string;
@@ -101,7 +103,7 @@ export default function Certificados() {
       try {
         setLoading(true);
 
-        const response = await fetch(`${API_URL}/certificados/aluno/${user.id}`);
+        const response = await apiFetch(`${API_URL}/certificados/aluno/${user.id}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -113,6 +115,7 @@ export default function Certificados() {
           tipo: item.tipo_arquivo === "RELATORIO" ? "relatorio" : "certificado",
           titulo: item.titulo,
           quantidadeHoras: Number(item.quantidade_horas || 0),
+          horasAprovadas: Number(item.horas_aprovadas || 0),
           dataEmissao: item.data_emissao,
           arquivoNome: item.nome_arquivo || "Arquivo",
           arquivoUrl: item.url_publica || item.url_arquivo,
@@ -137,7 +140,7 @@ export default function Certificados() {
   const totalHoras = useMemo(() => {
     return arquivos
       .filter((item) => item.status.toUpperCase() === "APROVADO")
-      .reduce((acc, item) => acc + Number(item.quantidadeHoras || 0), 0);
+      .reduce((acc, item) => acc + Number(item.horasAprovadas || 0), 0);
   }, [arquivos]);
 
   const limparFormulario = () => {
@@ -219,7 +222,7 @@ export default function Certificados() {
       formData.append("dataEmissao", data);
       formData.append("arquivo", arquivo);
 
-      const response = await fetch(`${API_URL}/certificados/upload`, {
+      const response = await apiFetch(`${API_URL}/certificados/upload`, {
         method: "POST",
         body: formData,
       });
@@ -237,6 +240,7 @@ export default function Certificados() {
         tipo: item.tipo_arquivo === "RELATORIO" ? "relatorio" : "certificado",
         titulo: item.titulo,
         quantidadeHoras: Number(item.quantidade_horas || 0),
+        horasAprovadas: Number(item.horas_aprovadas || 0),
         dataEmissao: item.data_emissao,
         arquivoNome: item.nome_arquivo || "Arquivo",
         arquivoUrl: item.url_publica || item.url_arquivo,
@@ -256,7 +260,7 @@ export default function Certificados() {
     if (!confirm("Deseja realmente excluir este arquivo?")) return;
 
     try {
-      const response = await fetch(`${API_URL}/certificados/${id}`, {
+      const response = await apiFetch(`${API_URL}/certificados/${id}`, {
         method: "DELETE",
       });
 
@@ -311,7 +315,9 @@ export default function Certificados() {
                 <p className="text-white/70 text-sm mb-1">
                   Horas:{" "}
                   <span className="text-white font-semibold">
-                    {item.quantidadeHoras}h
+                    {item.status.toUpperCase() === "APROVADO"
+                      ? `${item.horasAprovadas}h aprovadas (de ${item.quantidadeHoras}h)`
+                      : `${item.quantidadeHoras}h solicitadas`}
                   </span>
                 </p>
 
@@ -379,7 +385,7 @@ export default function Certificados() {
         </CardHeader>
 
         <CardContent className="space-y-6">
-          <div className="flex items-center justify-between mb-4">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
             <div className="flex gap-2 bg-white/10 p-1 rounded-xl">
               <button
                 onClick={() => setFiltro("certificado")}
@@ -406,7 +412,7 @@ export default function Certificados() {
 
             <Button
               onClick={() => abrirModal(filtro)}
-              className="rounded-xl bg-white text-[#2f3147] hover:bg-white/90 flex items-center gap-2"
+              className="w-full sm:w-auto rounded-xl bg-white text-[#2f3147] hover:bg-white/90 flex items-center justify-center gap-2"
             >
               <Upload className="size-4" />
               {filtro === "certificado"

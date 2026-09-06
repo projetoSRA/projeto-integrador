@@ -2,6 +2,7 @@ import { ReactNode, useState } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import { User } from "../utils/auth";
+import { apiFetch, clearSession } from "../utils/api";
 import { panelStyle } from "../../styles/uiStyles";
 import { LogOut, GraduationCap, Settings, Camera } from "lucide-react";
 
@@ -47,8 +48,7 @@ export default function AlunoLayout({
   };
 
   const confirmarLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
+    clearSession();
     navigate("/");
   };
   const [moldura, setMoldura] = useState(
@@ -80,7 +80,7 @@ export default function AlunoLayout({
     const formData = new FormData();
     formData.append("foto", file);
 
-    const response = await fetch(`${API_URL}/aluno/${user.id}/foto`, {
+    const response = await apiFetch(`${API_URL}/aluno/${user.id}/foto`, {
       method: "POST",
       body: formData,
     });
@@ -128,7 +128,7 @@ export default function AlunoLayout({
 
   return (
     <div
-      className="h-screen overflow-hidden p-4 md:p-6 relative"
+      className="min-h-screen lg:h-screen lg:overflow-hidden p-3 sm:p-4 md:p-6 relative"
       style={{
         background:
           "linear-gradient(135deg, #020305 0%, #05070d 42%, #071a44 100%)",
@@ -142,9 +142,9 @@ export default function AlunoLayout({
         }}
       />
 
-      <div className="relative flex h-full gap-10">
+      <div className="relative flex flex-col lg:flex-row h-full gap-4 lg:gap-10">
         <aside
-          className="w-80 min-h-full p-6 flex flex-col justify-between rounded-2xl"
+          className="order-2 lg:order-1 w-full lg:w-80 lg:shrink-0 lg:min-h-full p-4 sm:p-6 flex flex-col justify-between rounded-2xl"
           style={panelStyle}
         >
           <div>
@@ -206,11 +206,12 @@ export default function AlunoLayout({
             </p>
 
             <p className="text-white mb-4 text-base">
-              <strong>RM:</strong> {user.identifier}
+              <strong>{user.nivel_ensino === "FACULDADE" ? "RA:" : "RM:"}</strong> {user.identifier}
             </p>
 
             <p className="text-white mb-5 text-base">
-              <strong>Curso:</strong> Análise e Desenvolvimento de Sistemas
+              <strong>Curso:</strong> {user.curso || "Não informado"}
+              {user.serie_semestre ? ` · ${user.serie_semestre}` : ""}
             </p>
 
             <div className="space-y-4 mt-6">
@@ -254,32 +255,32 @@ export default function AlunoLayout({
           </Button>
         </aside>
 
-        <main className="flex-1 rounded-2xl p-6 overflow-hidden">
+        <main className="order-1 lg:order-2 flex-1 rounded-2xl p-3 sm:p-4 md:p-6 lg:overflow-hidden">
           <div
             className="
-              max-w-7xl mx-auto h-full overflow-y-auto pr-2
+              max-w-7xl mx-auto lg:h-full lg:overflow-y-auto lg:pr-2
               [scrollbar-width:none]
               [-ms-overflow-style:none]
               [&::-webkit-scrollbar]:hidden
             "
           >
             <header
-              className="grid grid-cols-3 items-center mb-8 p-6 rounded-2xl"
+              className="flex flex-col lg:flex-row lg:items-center gap-4 mb-8 p-4 sm:p-6 rounded-2xl"
               style={panelStyle}
             >
-              <div className="flex items-center gap-4">
-                <GraduationCap className="size-9 text-blue-400" />
+              <div className="w-full lg:w-auto flex items-center gap-4 shrink-0">
+                <GraduationCap className="size-9 text-blue-400 shrink-0" />
                 <div>
-                  <h1 className="text-3xl font-semibold text-white">
+                  <h1 className="text-2xl sm:text-3xl font-semibold text-white whitespace-nowrap">
                     Central SRA
                   </h1>
-                  <p className="text-white/70 text-base">
+                  <p className="text-white/70 text-sm sm:text-base">
                     Bem-vindo(a), {user.name}
                   </p>
                 </div>
               </div>
 
-              <div className="flex justify-center gap-12">
+              <div className="w-full lg:flex-1 flex flex-wrap justify-start lg:justify-center gap-x-4 gap-y-2 sm:gap-x-6 lg:gap-x-8">
                 <button
                   onClick={() => navigate("/aluno")}
                   className={navClass("inicio")}
@@ -309,7 +310,7 @@ export default function AlunoLayout({
                 </button>
               </div>
 
-              <div className="flex justify-end">
+              <div className="w-full lg:w-auto flex justify-end shrink-0">
                 <button
                   onClick={() => navigate("/configuracoes")}
                   className="p-3 rounded-xl bg-white/10 hover:bg-white/15 transition hover:rotate-90 duration-300"

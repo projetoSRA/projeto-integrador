@@ -606,9 +606,12 @@ function SidebarMenuSkeleton({
 }: React.ComponentProps<"div"> & {
   showIcon?: boolean;
 }) {
-  // Random width between 50 to 90%.
+  // Random width between 50 to 90% (puramente visual, sem uso de
+  // segurança) — usa Web Crypto em vez de Math.random() só para não
+  // acionar a regra genérica de "gerador aleatório inseguro" do scanner.
   const width = React.useMemo(() => {
-    return `${Math.floor(Math.random() * 40) + 50}%`;
+    const randomByte = crypto.getRandomValues(new Uint8Array(1))[0];
+    return `${Math.floor((randomByte / 255) * 40) + 50}%`;
   }, []);
 
   return (

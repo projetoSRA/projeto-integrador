@@ -1,7 +1,17 @@
 import { Router } from "express";
 import { db } from "../db.js";
+import {
+  requireAuth,
+  requireRole,
+  requireSelfAlunoOrCoordenacao,
+  requireSelfEmpresaOrCoordenacao,
+} from "../middleware/auth.js";
 
 const router = Router();
+
+// Antes: todas as rotas abaixo eram públicas. Agora exigem login; as
+// checagens de papel/posse específicas ficam em cada rota (achado C1).
+router.use(requireAuth);
 
 router.get("/", async (req, res) => {
   try {
@@ -31,12 +41,15 @@ router.get("/", async (req, res) => {
   }
 });
 
-router.get("/empresa/:idEmpresa", async (req, res) => {
-  try {
-    const { idEmpresa } = req.params;
+router.get(
+  "/empresa/:idEmpresa",
+  requireSelfEmpresaOrCoordenacao("idEmpresa"),
+  async (req, res) => {
+    try {
+      const { idEmpresa } = req.params;
 
-    const result = await db.query(
-      `
+      const result = await db.query(
+        `
       SELECT
         id_evento,
         id_empresa,
@@ -53,22 +66,26 @@ router.get("/empresa/:idEmpresa", async (req, res) => {
       WHERE id_empresa = $1
       ORDER BY data_evento DESC, criado_em DESC
       `,
-      [idEmpresa]
-    );
+        [idEmpresa]
+      );
 
-    return res.json(result.rows);
-  } catch (error) {
-    console.error("Erro ao listar eventos da empresa:", error);
-    return res.status(500).json({
-      message: "Erro ao listar eventos da empresa.",
-    });
+      return res.json(result.rows);
+    } catch (error) {
+      console.error("Erro ao listar eventos da empresa:", error);
+      return res.status(500).json({
+        message: "Erro ao listar eventos da empresa.",
+      });
+    }
   }
-});
+);
 
-router.post("/", async (req, res) => {
+// Antes: qualquer pessoa podia criar um evento em nome de qualquer empresa
+// informando o idEmpresa no corpo. Agora exige login como EMPRESA e usa o
+// id do token, ignorando qualquer idEmpresa vindo do cliente.
+router.post("/", requireRole("EMPRESA"), async (req, res) => {
   try {
+    const idEmpresa = req.auth!.id_empresa;
     const {
-      idEmpresa,
       titulo,
       descricao,
       tipoEvento,
@@ -126,9 +143,33 @@ router.post("/", async (req, res) => {
   }
 });
 
+// Antes: qualquer pessoa podia apagar qualquer evento só sabendo o id.
+// Agora exige login e verifica se quem apaga é a empresa dona do evento ou
+// a coordenação.
 router.delete("/:idEvento", async (req, res) => {
   try {
     const { idEvento } = req.params;
+    const auth = req.auth!;
+
+    const evento = await db.query(
+      `SELECT id_empresa FROM public.eventos WHERE id_evento = $1`,
+      [idEvento]
+    );
+
+    if (evento.rowCount === 0) {
+      return res.status(404).json({ message: "Evento não encontrado." });
+    }
+
+    const podeExcluir =
+      auth.tipo_usuario === "COORDENACAO" ||
+      (auth.tipo_usuario === "EMPRESA" &&
+        String(auth.id_empresa) === String(evento.rows[0].id_empresa));
+
+    if (!podeExcluir) {
+      return res.status(403).json({
+        message: "Você não tem permissão para excluir este evento.",
+      });
+    }
 
     await db.query(
       `
@@ -148,32 +189,90 @@ router.delete("/:idEvento", async (req, res) => {
     });
   }
 });
-router.get("/inscricoes/aluno/:idAluno", async (req, res) => {
-  try {
-    const { idAluno } = req.params;
 
-    const result = await db.query(
-      `
+// Eventos em que um aluno está inscrito, com os dados completos do evento
+// (usado na tela de detalhe do aluno na coordenação).
+router.get(
+  "/aluno/:idAluno",
+  requireSelfAlunoOrCoordenacao("idAluno"),
+  async (req, res) => {
+    try {
+      const { idAluno } = req.params;
+
+      const result = await db.query(
+        `
+      SELECT
+        ev.id_evento,
+        ev.id_empresa,
+        emp.nome_empresa,
+        ev.titulo,
+        ev.descricao,
+        ev.tipo_evento,
+        ev.data_evento,
+        ev.horario,
+        ev.carga_horaria,
+        ev.palestrante,
+        ev.info_palestrante,
+        i.status_inscricao
+      FROM public.inscricao i
+      JOIN public.eventos ev ON ev.id_evento = i.id_evento
+      JOIN public.empresa emp ON emp.id_empresa = ev.id_empresa
+      WHERE i.id_aluno = $1
+      ORDER BY ev.data_evento DESC
+      `,
+        [idAluno]
+      );
+
+      return res.json(result.rows);
+    } catch (error) {
+      console.error("Erro ao listar eventos do aluno:", error);
+      return res.status(500).json({
+        message: "Erro ao listar eventos do aluno.",
+      });
+    }
+  }
+);
+
+router.get(
+  "/inscricoes/aluno/:idAluno",
+  requireRole("ALUNO", "COORDENACAO"),
+  async (req, res) => {
+    try {
+      const { idAluno } = req.params;
+      const auth = req.auth!;
+
+      if (auth.tipo_usuario === "ALUNO" && String(auth.id_aluno) !== String(idAluno)) {
+        return res.status(403).json({
+          message: "Você não tem permissão para acessar dados de outro aluno.",
+        });
+      }
+
+      const result = await db.query(
+        `
       SELECT id_evento, status_inscricao
       FROM public.inscricao
       WHERE id_aluno = $1
       `,
-      [idAluno]
-    );
+        [idAluno]
+      );
 
-    return res.json(result.rows);
-  } catch (error) {
-    console.error("Erro ao listar inscrições:", error);
-    return res.status(500).json({
-      message: "Erro ao listar inscrições.",
-    });
+      return res.json(result.rows);
+    } catch (error) {
+      console.error("Erro ao listar inscrições:", error);
+      return res.status(500).json({
+        message: "Erro ao listar inscrições.",
+      });
+    }
   }
-});
+);
 
-router.post("/:idEvento/inscrever", async (req, res) => {
+// Antes: qualquer pessoa podia inscrever qualquer aluno em qualquer evento
+// informando idAluno no corpo. Agora exige login como ALUNO e usa o id do
+// próprio token (auto-inscrição apenas).
+router.post("/:idEvento/inscrever", requireRole("ALUNO"), async (req, res) => {
   try {
     const { idEvento } = req.params;
-    const { idAluno } = req.body;
+    const idAluno = req.auth!.id_aluno;
 
     if (!idAluno || !idEvento) {
       return res.status(400).json({
@@ -221,9 +320,31 @@ router.post("/:idEvento/inscrever", async (req, res) => {
     });
   }
 });
-router.get("/:idEvento/inscritos", async (req, res) => {
+
+// Antes: pública — expunha nome, email, RM/RA e curso de todos os inscritos
+// para qualquer pessoa. Agora restrita à empresa dona do evento e à
+// coordenação (dados sensíveis de alunos, achado A1).
+router.get("/:idEvento/inscritos", requireRole("COORDENACAO", "EMPRESA"), async (req, res) => {
   try {
     const { idEvento } = req.params;
+    const auth = req.auth!;
+
+    if (auth.tipo_usuario === "EMPRESA") {
+      const evento = await db.query(
+        `SELECT id_empresa FROM public.eventos WHERE id_evento = $1`,
+        [idEvento]
+      );
+
+      if (evento.rowCount === 0) {
+        return res.status(404).json({ message: "Evento não encontrado." });
+      }
+
+      if (String(auth.id_empresa) !== String(evento.rows[0].id_empresa)) {
+        return res.status(403).json({
+          message: "Você não tem permissão para ver os inscritos deste evento.",
+        });
+      }
+    }
 
     const result = await db.query(
       `
@@ -231,23 +352,21 @@ router.get("/:idEvento/inscritos", async (req, res) => {
         a.id_aluno,
         a.nome,
         a.email,
-        u.login AS rm,
+        a.rm,
+        a.ra,
+        a.curso,
+        a.nivel_ensino,
+        a.serie_semestre,
         i.status_inscricao
       FROM public.inscricao i
       JOIN public.aluno a ON a.id_aluno = i.id_aluno
-      LEFT JOIN public.usuario u ON u.id_aluno = a.id_aluno
       WHERE i.id_evento = $1
       ORDER BY a.nome ASC
       `,
       [idEvento]
     );
 
-    return res.json(
-      result.rows.map((item) => ({
-        ...item,
-        curso: "Análise e Desenvolvimento de Sistemas",
-      }))
-    );
+    return res.json(result.rows);
   } catch (error) {
     console.error("Erro ao listar inscritos:", error);
     return res.status(500).json({
@@ -255,4 +374,5 @@ router.get("/:idEvento/inscritos", async (req, res) => {
     });
   }
 });
+
 export default router;

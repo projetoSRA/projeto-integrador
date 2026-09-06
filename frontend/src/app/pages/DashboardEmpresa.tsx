@@ -8,6 +8,7 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { User } from "../utils/auth";
+import { apiFetch, clearSession } from "../utils/api";
 import { panelStyle, cardStyle, buttonGlass } from "../../styles/uiStyles";
 import {
   Building2,
@@ -113,7 +114,7 @@ export default function DashboardEmpresa() {
       try {
         setLoading(true);
 
-        const response = await fetch(`${API_URL}/eventos/empresa/${user.id}`);
+        const response = await apiFetch(`${API_URL}/eventos/empresa/${user.id}`);
         const data = await response.json();
 
         if (!response.ok) {
@@ -163,7 +164,7 @@ export default function DashboardEmpresa() {
     try {
       setSalvando(true);
 
-      const response = await fetch(`${API_URL}/eventos`, {
+      const response = await apiFetch(`${API_URL}/eventos`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -200,7 +201,7 @@ export default function DashboardEmpresa() {
     if (!confirm("Deseja realmente excluir este evento?")) return;
 
     try {
-      const response = await fetch(`${API_URL}/eventos/${idEvento}`, {
+      const response = await apiFetch(`${API_URL}/eventos/${idEvento}`, {
         method: "DELETE",
       });
 
@@ -223,7 +224,7 @@ export default function DashboardEmpresa() {
       setLoadingInscritos(true);
       setInscritos([]);
 
-      const response = await fetch(
+      const response = await apiFetch(
         `${API_URL}/eventos/${evento.id_evento}/inscritos`,
       );
 
@@ -261,8 +262,7 @@ export default function DashboardEmpresa() {
 };
 
 const confirmarLogout = () => {
-  localStorage.removeItem("user");
-  localStorage.removeItem("token");
+  clearSession();
   navigate("/");
 };
 
@@ -270,7 +270,7 @@ const confirmarLogout = () => {
 
   return (
     <div
-      className="h-screen overflow-hidden p-4 md:p-6 relative"
+      className="min-h-screen lg:h-screen lg:overflow-hidden p-3 sm:p-4 md:p-6 relative"
       style={{
         background:
           "linear-gradient(135deg, #020305 0%, #05070d 42%, #071a44 100%)",
@@ -284,9 +284,9 @@ const confirmarLogout = () => {
         }}
       />
 
-      <div className="relative flex h-full gap-10">
+      <div className="relative flex flex-col lg:flex-row h-full gap-4 lg:gap-10">
         <aside
-          className="w-80 min-h-full p-6 flex flex-col justify-between rounded-2xl"
+          className="order-2 lg:order-1 w-full lg:w-80 lg:shrink-0 lg:min-h-full p-4 sm:p-6 flex flex-col justify-between rounded-2xl"
           style={panelStyle}
         >
           <div>
@@ -324,26 +324,26 @@ const confirmarLogout = () => {
           </Button>
         </aside>
 
-        <main className="flex-1 rounded-2xl p-6 overflow-hidden">
+        <main className="order-1 lg:order-2 flex-1 rounded-2xl p-3 sm:p-4 md:p-6 lg:overflow-hidden">
           <div
             className="
-              max-w-7xl mx-auto h-full overflow-y-auto pr-2
+              max-w-7xl mx-auto lg:h-full lg:overflow-y-auto lg:pr-2
               [scrollbar-width:none]
               [-ms-overflow-style:none]
               [&::-webkit-scrollbar]:hidden
             "
           >
             <header
-              className="flex items-center justify-between mb-8 p-6 rounded-2xl"
+              className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 p-4 sm:p-6 rounded-2xl"
               style={panelStyle}
             >
               <div className="flex items-center gap-4">
-                <Building2 className="size-9 text-blue-400" />
+                <Building2 className="size-9 text-blue-400 shrink-0" />
                 <div>
-                  <h1 className="text-3xl font-semibold text-white">
+                  <h1 className="text-2xl sm:text-3xl font-semibold text-white">
                     Central SRA
                   </h1>
-                  <p className="text-white/70 text-base">
+                  <p className="text-white/70 text-sm sm:text-base">
                     Bem-vindo(a), {user.name}
                   </p>
                 </div>
@@ -351,7 +351,7 @@ const confirmarLogout = () => {
 
               <Button
                 onClick={() => setModalAberto(true)}
-                className="rounded-xl bg-white text-[#2f3147] hover:bg-white/90 flex items-center gap-2 px-5 py-2"
+                className="w-full sm:w-auto rounded-xl bg-white text-[#2f3147] hover:bg-white/90 flex items-center justify-center gap-2 px-5 py-2"
               >
                 <Plus className="size-4" />
                 Novo evento

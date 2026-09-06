@@ -1,6 +1,16 @@
-// Validação de RM (Registro de Matrícula)
+// Validação de RM (Registro de Matrícula - Ensino Médio)
 export const validateRM = (rm: string): boolean => {
   return /^\d{5}$/.test(rm);
+};
+
+// Validação de RA (Registro Acadêmico - Faculdade)
+export const validateRA = (ra: string): boolean => {
+  return /^\d{6,12}$/.test(ra);
+};
+
+// Aceita RM (ensino médio) ou RA (faculdade)
+export const validateMatriculaAluno = (valor: string): boolean => {
+  return validateRM(valor) || validateRA(valor);
 };
 
 // Validação de Login (máximo 8 caracteres)

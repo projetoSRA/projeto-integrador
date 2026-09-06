@@ -2,6 +2,8 @@ import { Router } from "express";
 import multer from "multer";
 import { db } from "../db.js";
 import { supabase } from "../supabase.js";
+import { requireAuth, requireRole, requireSelfAlunoOrCoordenacao } from "../middleware/auth.js";
+import { matchesDeclaredType } from "../utils/fileSignature.js";
 
 const router = Router();
 
@@ -37,12 +39,19 @@ function validarArquivo(tipo: string, file: Express.Multer.File) {
   ].includes(mime);
 }
 
-router.get("/aluno/:idAluno", async (req, res) => {
-  try {
-    const { idAluno } = req.params;
+// Antes: rota pública — qualquer pessoa via URL direta via os certificados e
+// dados pessoais (nome, RM/RA, email) de qualquer aluno. Agora exige login e
+// que o chamador seja o próprio aluno ou a coordenação (achados C1 e A1).
+router.get(
+  "/aluno/:idAluno",
+  requireAuth,
+  requireSelfAlunoOrCoordenacao("idAluno"),
+  async (req, res) => {
+    try {
+      const { idAluno } = req.params;
 
-    const result = await db.query(
-      `
+      const result = await db.query(
+        `
       SELECT
         id_certificado,
         id_aluno,
@@ -59,88 +68,107 @@ router.get("/aluno/:idAluno", async (req, res) => {
         tamanho_arquivo,
         storage_path,
         url_publica,
+        horas_aprovadas,
         criado_em
       FROM public.certificados
       WHERE id_aluno = $1
       ORDER BY criado_em DESC
       `,
-      [idAluno]
-    );
+        [idAluno]
+      );
 
-    return res.json(result.rows);
-  } catch (error) {
-    console.error("Erro ao listar arquivos:", error);
-    return res.status(500).json({
-      message: "Erro ao listar arquivos.",
-    });
-  }
-});
-
-router.post("/upload", upload.single("arquivo"), async (req, res) => {
-  try {
-    const { idAluno, tipo, titulo, horas, dataEmissao } = req.body;
-    const file = req.file;
-
-    if (!idAluno || !tipo || !titulo || !horas || !dataEmissao || !file) {
-      return res.status(400).json({
-        message: "Dados obrigatórios não enviados.",
-      });
-    }
-
-    const tipoArquivo = normalizarTipo(tipo);
-    const quantidadeHoras = Number(horas);
-
-    if (tipoArquivo === "RELATORIO" && (quantidadeHoras < 1 || quantidadeHoras > 2)) {
-      return res.status(400).json({
-        message: "Relatórios devem ter entre 1 e 2 horas.",
-      });
-    }
-
-    if (tipoArquivo === "CERTIFICADO" && quantidadeHoras < 1) {
-      return res.status(400).json({
-        message: "Certificados devem ter pelo menos 1 hora.",
-      });
-    }
-
-    if (!validarArquivo(tipoArquivo, file)) {
-      return res.status(400).json({
-        message:
-          tipoArquivo === "CERTIFICADO"
-            ? "Certificados aceitam apenas imagem ou PDF."
-            : "Relatórios aceitam apenas PDF, TXT, DOC ou DOCX.",
-      });
-    }
-
-    const pasta = tipoArquivo === "CERTIFICADO" ? "certificados" : "relatorios";
-    const nomeSeguro = file.originalname
-      .normalize("NFD")
-      .replace(/[\u0300-\u036f]/g, "")
-      .replace(/[^a-zA-Z0-9._-]/g, "_");
-
-    const storagePath = `${pasta}/aluno-${idAluno}/${Date.now()}-${nomeSeguro}`;
-
-    const { error: uploadError } = await supabase.storage
-      .from(BUCKET)
-      .upload(storagePath, file.buffer, {
-        contentType: file.mimetype,
-        upsert: false,
-      });
-
-    if (uploadError) {
-      console.error(uploadError);
+      return res.json(result.rows);
+    } catch (error) {
+      console.error("Erro ao listar arquivos:", error);
       return res.status(500).json({
-        message: "Erro ao enviar arquivo para o Supabase Storage.",
+        message: "Erro ao listar arquivos.",
       });
     }
+  }
+);
 
-    const { data: publicUrlData } = supabase.storage
-      .from(BUCKET)
-      .getPublicUrl(storagePath);
+// Antes: qualquer pessoa podia enviar um certificado em nome de qualquer
+// idAluno informado no corpo da requisição. Agora exige login como ALUNO e
+// o id do aluno vem do token (nunca do corpo enviado pelo cliente).
+router.post(
+  "/upload",
+  requireAuth,
+  requireRole("ALUNO"),
+  upload.single("arquivo"),
+  async (req, res) => {
+    try {
+      const idAluno = req.auth!.id_aluno;
+      const { tipo, titulo, horas, dataEmissao } = req.body;
+      const file = req.file;
 
-    const urlPublica = publicUrlData.publicUrl;
+      if (!idAluno || !tipo || !titulo || !horas || !dataEmissao || !file) {
+        return res.status(400).json({
+          message: "Dados obrigatórios não enviados.",
+        });
+      }
 
-    const insert = await db.query(
-      `
+      const tipoArquivo = normalizarTipo(tipo);
+      const quantidadeHoras = Number(horas);
+
+      if (tipoArquivo === "RELATORIO" && (quantidadeHoras < 1 || quantidadeHoras > 2)) {
+        return res.status(400).json({
+          message: "Relatórios devem ter entre 1 e 2 horas.",
+        });
+      }
+
+      if (tipoArquivo === "CERTIFICADO" && quantidadeHoras < 1) {
+        return res.status(400).json({
+          message: "Certificados devem ter pelo menos 1 hora.",
+        });
+      }
+
+      if (!validarArquivo(tipoArquivo, file)) {
+        return res.status(400).json({
+          message:
+            tipoArquivo === "CERTIFICADO"
+              ? "Certificados aceitam apenas imagem ou PDF."
+              : "Relatórios aceitam apenas PDF, TXT, DOC ou DOCX.",
+        });
+      }
+
+      // Não confia apenas no Content-Type declarado pelo cliente
+      // (achado A3 do relatório de pentest).
+      if (!matchesDeclaredType(file.buffer, file.mimetype)) {
+        return res.status(400).json({
+          message: "O conteúdo do arquivo não corresponde ao tipo declarado.",
+        });
+      }
+
+      const pasta = tipoArquivo === "CERTIFICADO" ? "certificados" : "relatorios";
+      const nomeSeguro = file.originalname
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .replace(/[^a-zA-Z0-9._-]/g, "_");
+
+      const storagePath = `${pasta}/aluno-${idAluno}/${Date.now()}-${nomeSeguro}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from(BUCKET)
+        .upload(storagePath, file.buffer, {
+          contentType: file.mimetype,
+          upsert: false,
+        });
+
+      if (uploadError) {
+        console.error(uploadError);
+        return res.status(500).json({
+          message: "Erro ao enviar arquivo para o Supabase Storage.",
+        });
+      }
+
+      const { data: publicUrlData } = supabase.storage
+        .from(BUCKET)
+        .getPublicUrl(storagePath);
+
+      const urlPublica = publicUrlData.publicUrl;
+
+      const insert = await db.query(
+        `
       INSERT INTO public.certificados (
         id_aluno,
         id_evento,
@@ -155,49 +183,55 @@ router.post("/upload", upload.single("arquivo"), async (req, res) => {
         mime_type,
         tamanho_arquivo,
         storage_path,
-        url_publica
+        url_publica,
+        horas_aprovadas
       )
       VALUES (
         $1, NULL, $2, $3, $4, $5, $6,
-        'PENDENTE', $7, $8, $9, $10, $11, $12
+        'PENDENTE', $7, $8, $9, $10, $11, $12, 0
       )
       RETURNING *
       `,
-      [
-        idAluno,
-        titulo,
-        "3° AMS Ourinhos",
-        quantidadeHoras,
-        dataEmissao,
-        urlPublica,
-        tipoArquivo,
-        file.originalname,
-        file.mimetype,
-        file.size,
-        storagePath,
-        urlPublica,
-      ]
-    );
+        [
+          idAluno,
+          titulo,
+          "3° AMS Ourinhos",
+          quantidadeHoras,
+          dataEmissao,
+          urlPublica,
+          tipoArquivo,
+          file.originalname,
+          file.mimetype,
+          file.size,
+          storagePath,
+          urlPublica,
+        ]
+      );
 
-    return res.status(201).json({
-      message: "Arquivo enviado com sucesso.",
-      arquivo: insert.rows[0],
-    });
-  } catch (error) {
-    console.error("Erro no upload:", error);
-    return res.status(500).json({
-      message: "Erro interno ao enviar arquivo.",
-    });
+      return res.status(201).json({
+        message: "Arquivo enviado com sucesso.",
+        arquivo: insert.rows[0],
+      });
+    } catch (error) {
+      console.error("Erro no upload:", error);
+      return res.status(500).json({
+        message: "Erro interno ao enviar arquivo.",
+      });
+    }
   }
-});
+);
 
-router.delete("/:idCertificado", async (req, res) => {
+// Antes: qualquer pessoa podia apagar o certificado de qualquer aluno só
+// sabendo o id. Agora exige login e verifica se quem está apagando é o
+// dono do certificado (aluno) ou a coordenação.
+router.delete("/:idCertificado", requireAuth, async (req, res) => {
   try {
     const { idCertificado } = req.params;
+    const auth = req.auth!;
 
     const arquivo = await db.query(
       `
-      SELECT storage_path
+      SELECT id_aluno, storage_path
       FROM public.certificados
       WHERE id_certificado = $1
       `,
@@ -210,7 +244,17 @@ router.delete("/:idCertificado", async (req, res) => {
       });
     }
 
-    const storagePath = arquivo.rows[0].storage_path;
+    const { id_aluno: idAlunoDono, storage_path: storagePath } = arquivo.rows[0];
+
+    const podeExcluir =
+      auth.tipo_usuario === "COORDENACAO" ||
+      (auth.tipo_usuario === "ALUNO" && String(auth.id_aluno) === String(idAlunoDono));
+
+    if (!podeExcluir) {
+      return res.status(403).json({
+        message: "Você não tem permissão para excluir este arquivo.",
+      });
+    }
 
     if (storagePath) {
       await supabase.storage.from(BUCKET).remove([storagePath]);

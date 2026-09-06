@@ -2,8 +2,11 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { User } from "../utils/auth";
+import { apiFetch } from "../utils/api";
 import AlunoLayout, { glassCardStyle } from "../components/AlunoLayout";
 import { panelStyle, cardStyle, buttonGlass } from "../../styles/uiStyles";
+
+const API_URL = import.meta.env.VITE_API_URL || "http://localhost:3000";
 
 import {
   Newspaper,
@@ -74,9 +77,9 @@ export default function DashboardAluno() {
 
     setUser(parsedUser);
 
-    fetch(`http://localhost:3000/aluno/horas/${parsedUser.identifier}`)
+    apiFetch(`${API_URL}/horas/aluno/${parsedUser.id}`)
     .then(res => res.json())
-    .then(data => setHoras(data.horas))
+    .then(data => setHoras(data.totalHoras || 0))
     .catch(() => setHoras(0));
   }, [navigate]);
 
