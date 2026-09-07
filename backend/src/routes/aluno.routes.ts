@@ -1,5 +1,6 @@
 import { Router } from "express";
 import multer from "multer";
+import ExcelJS from "exceljs";
 import { db } from "../db.js";
 import { supabase } from "../supabase.js";
 import {
@@ -8,6 +9,9 @@ import {
   requireSelfAlunoOrCoordenacao,
 } from "../middleware/auth.js";
 import { matchesDeclaredType } from "../utils/fileSignature.js";
+
+const XLSX_MIMETYPE =
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
 
 const router = Router();
 
@@ -240,6 +244,245 @@ router.post(
       return res.status(500).json({
         message: "Erro ao atualizar foto.",
       });
+    }
+  }
+);
+
+function normalizarTexto(valor: unknown): string {
+  if (valor == null) return "";
+  return String(valor).trim();
+}
+
+function normalizarCabecalho(valor: unknown): string {
+  return normalizarTexto(valor).toUpperCase();
+}
+
+// A planilha da coordenação guarda o RM como texto, mas se alguém digitar/
+// colar como número o Excel converte a célula — cobrimos os dois casos.
+function normalizarRm(valor: unknown): string {
+  if (valor == null) return "";
+  if (typeof valor === "number") return String(Math.trunc(valor));
+  return String(valor).trim();
+}
+
+// Extrai curso/turma/ano/série da linha de metadados que fica acima do
+// cabeçalho RM/NOME/GRUPO no modelo padrão da coordenação, ex.:
+// "Habilitação: _MTEC - DESENVOLVIMENTO DE SISTEMAS - AMS Turma: TURMA A
+//  Semestre:  Ano: 2023 Módulo/Série: 3 SERIE Componente Curricular: "
+// Se a planilha não seguir esse padrão, os dados de turma ficam null e a
+// importação segue só com RM/NOME (não é motivo para recusar o arquivo).
+function extrairMetadadosTurma(texto: string) {
+  const match = texto.match(
+    /Habilita[çc][ãa]o:\s*_?([\s\S]*?)\s*Turma:\s*([\s\S]*?)\s*Semestre:\s*([\s\S]*?)\s*Ano:\s*([\s\S]*?)\s*M[óo]dulo\/S[ée]rie:\s*([\s\S]*?)\s*Componente Curricular:/i
+  );
+
+  if (!match) {
+    return { curso: null, turma: null, ano: null, serieSemestre: null };
+  }
+
+  return {
+    curso: match[1]?.trim() || null,
+    turma: match[2]?.trim() || null,
+    ano: match[4]?.trim() || null,
+    serieSemestre: match[5]?.trim() || null,
+  };
+}
+
+// Importação em lote de alunos via planilha Excel (RF006 do TCC).
+// Espera o modelo oficial usado pela coordenação: uma linha de metadados
+// da turma, seguida por um cabeçalho "RM | NOME | GRUPO" e uma linha por
+// aluno. A coluna GRUPO é lida mas não é persistida (não existe campo
+// correspondente no modelo de dados atual).
+//
+// Alunos com RM já cadastrado têm nome/curso/série atualizados; RMs novos
+// geram um cadastro de aluno + um usuário do tipo ALUNO sem senha (mesmo
+// estado de uma conta criada manualmente pela coordenação — o aluno só
+// consegue logar depois que uma senha for definida).
+router.post(
+  "/importar-planilha",
+  requireAuth,
+  requireRole("COORDENACAO"),
+  upload.single("planilha"),
+  async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "Nenhuma planilha enviada." });
+      }
+
+      if (!req.file.originalname.toLowerCase().endsWith(".xlsx")) {
+        return res.status(400).json({
+          message: "Envie um arquivo .xlsx (Excel).",
+        });
+      }
+
+      // Não confia apenas na extensão do nome do arquivo — confere a
+      // assinatura real do conteúdo (achado A3 do relatório de pentest,
+      // mesmo princípio já aplicado ao upload de foto de perfil).
+      if (!matchesDeclaredType(req.file.buffer, XLSX_MIMETYPE)) {
+        return res.status(400).json({
+          message: "O conteúdo do arquivo não corresponde a uma planilha .xlsx válida.",
+        });
+      }
+
+      const workbook = new ExcelJS.Workbook();
+      try {
+        // Cast por incompatibilidade de tipos entre o Buffer do @types/node
+        // instalado e o tipo esperado pelo .d.ts da exceljs — mesmo Buffer
+        // em tempo de execução, só um atrito de definição de tipos.
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        await workbook.xlsx.load(req.file.buffer as any);
+      } catch (parseError) {
+        console.error("Erro ao ler planilha:", parseError);
+        return res.status(400).json({
+          message: "Não foi possível ler o arquivo. Confira se é uma planilha .xlsx válida.",
+        });
+      }
+
+      const sheet = workbook.worksheets[0];
+      if (!sheet) {
+        return res.status(400).json({ message: "A planilha não tem nenhuma aba com dados." });
+      }
+
+      let headerRowNumber = -1;
+      for (let r = 1; r <= sheet.rowCount; r++) {
+        const row = sheet.getRow(r);
+        if (
+          normalizarCabecalho(row.getCell(1).value) === "RM" &&
+          normalizarCabecalho(row.getCell(2).value) === "NOME"
+        ) {
+          headerRowNumber = r;
+          break;
+        }
+      }
+
+      if (headerRowNumber === -1) {
+        return res.status(400).json({
+          message:
+            "Não encontrei as colunas RM e NOME na planilha. Use o modelo padrão da coordenação.",
+        });
+      }
+
+      let textoMetadados = "";
+      for (let r = 1; r < headerRowNumber; r++) {
+        const row = sheet.getRow(r);
+        for (let c = 1; c <= sheet.columnCount; c++) {
+          const valor = row.getCell(c).value;
+          if (typeof valor === "string" && valor.trim()) {
+            textoMetadados += ` ${valor}`;
+          }
+        }
+      }
+
+      const { curso, turma, ano, serieSemestre } = extrairMetadadosTurma(textoMetadados);
+
+      // Deduplica RMs repetidos dentro da própria planilha (última
+      // ocorrência vence) e valida cada linha antes de tocar no banco.
+      const alunosValidos = new Map<string, { linha: number; nome: string }>();
+      const ignorados: { linha: number; motivo: string }[] = [];
+
+      for (let r = headerRowNumber + 1; r <= sheet.rowCount; r++) {
+        const row = sheet.getRow(r);
+        const rm = normalizarRm(row.getCell(1).value);
+        const nome = normalizarTexto(row.getCell(2).value);
+
+        if (!rm && !nome) continue; // linha em branco no fim da planilha
+
+        if (!rm || !nome) {
+          ignorados.push({ linha: r, motivo: "RM ou nome ausente" });
+          continue;
+        }
+
+        if (rm.length > 20) {
+          ignorados.push({ linha: r, motivo: "RM com mais de 20 caracteres" });
+          continue;
+        }
+
+        if (nome.length > 150) {
+          ignorados.push({ linha: r, motivo: "Nome com mais de 150 caracteres" });
+          continue;
+        }
+
+        alunosValidos.set(rm, { linha: r, nome });
+      }
+
+      if (alunosValidos.size === 0) {
+        return res.status(400).json({
+          message: "Nenhuma linha válida encontrada na planilha.",
+          ignorados,
+        });
+      }
+
+      const client = await db.connect();
+      let criados = 0;
+      let atualizados = 0;
+
+      try {
+        await client.query("BEGIN");
+
+        for (const [rm, { nome }] of alunosValidos) {
+          const existente = await client.query(
+            `SELECT id_aluno FROM public.aluno WHERE rm = $1`,
+            [rm]
+          );
+
+          if ((existente.rowCount ?? 0) > 0) {
+            await client.query(
+              `
+              UPDATE public.aluno
+              SET nome = $1,
+                  curso = COALESCE($2, curso),
+                  serie_semestre = COALESCE($3, serie_semestre)
+              WHERE rm = $4
+              `,
+              [nome, curso, serieSemestre, rm]
+            );
+            atualizados++;
+          } else {
+            const novoUsuario = await client.query(
+              `INSERT INTO public.usuario (login, senha, tipo_usuario) VALUES ($1, NULL, 'ALUNO') RETURNING id_usuario`,
+              [rm]
+            );
+            const idUsuario = novoUsuario.rows[0].id_usuario;
+
+            // A planilha não traz e-mail, mas a coluna é NOT NULL no banco.
+            // Usa um placeholder derivado do RM (único, fácil de reconhecer
+            // como provisório) até o próprio aluno ou a coordenação
+            // atualizarem com o e-mail real.
+            const emailPlaceholder = `aluno.rm${rm}@sra.local`;
+
+            await client.query(
+              `
+              INSERT INTO public.aluno (id_usuario, nome, email, rm, curso, serie_semestre, nivel_ensino)
+              VALUES ($1, $2, $3, $4, $5, $6, 'MEDIO')
+              `,
+              [idUsuario, nome, emailPlaceholder, rm, curso, serieSemestre]
+            );
+            criados++;
+          }
+        }
+
+        await client.query("COMMIT");
+      } catch (dbError) {
+        await client.query("ROLLBACK");
+        console.error("Erro ao importar planilha de alunos:", dbError);
+        return res.status(500).json({
+          message: "Erro ao importar a planilha. Nenhuma alteração foi salva.",
+        });
+      } finally {
+        client.release();
+      }
+
+      return res.status(200).json({
+        message: "Importação concluída.",
+        turma: { curso, turma, ano, serieSemestre },
+        criados,
+        atualizados,
+        totalNaPlanilha: alunosValidos.size,
+        ignorados,
+      });
+    } catch (error) {
+      console.error("Erro ao importar planilha de alunos:", error);
+      return res.status(500).json({ message: "Erro ao importar a planilha." });
     }
   }
 );

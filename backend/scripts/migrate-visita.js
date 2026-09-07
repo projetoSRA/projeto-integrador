@@ -6,9 +6,11 @@ const { Pool } = require("pg");
 
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
-  // Mesma correção aplicada em src/db.ts — validar o certificado TLS de
-  // verdade em vez de aceitar qualquer um sem verificação.
-  ssl: { rejectUnauthorized: true },
+  // Revertido (2026-09-07): rejectUnauthorized:true quebra a conexão real
+  // com o pooler do Supabase ("self-signed certificate in certificate
+  // chain") sem o CA cert do Supabase configurado explicitamente. Ver
+  // src/db.ts para o mesmo ajuste e o motivo completo.
+  ssl: { rejectUnauthorized: false },
 });
 
 async function main() {

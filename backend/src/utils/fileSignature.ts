@@ -18,6 +18,10 @@ export function matchesDeclaredType(buffer: Buffer, mimetype: string): boolean {
       );
     case "application/pdf":
       return startsWith(buffer, [0x25, 0x50, 0x44, 0x46]); // "%PDF"
+    case "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":
+      // .xlsx é um arquivo ZIP por baixo — confere a assinatura local de
+      // arquivo ZIP ("PK\x03\x04") em vez de confiar só na extensão/mimetype.
+      return startsWith(buffer, [0x50, 0x4b, 0x03, 0x04]);
     default:
       // Tipos sem verificação de assinatura implementada (doc/docx/txt):
       // não bloqueia, mas também não garante o conteúdo real.
