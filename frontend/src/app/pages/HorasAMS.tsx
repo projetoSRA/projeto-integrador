@@ -52,6 +52,11 @@ export default function HorasAMS() {
       return;
     }
 
+    if (parsedUser.precisaTrocarSenha) {
+      navigate("/primeiro-acesso");
+      return;
+    }
+
     setUser(parsedUser);
   }, [navigate]);
 

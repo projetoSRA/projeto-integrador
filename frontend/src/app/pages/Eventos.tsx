@@ -67,6 +67,11 @@ export default function Eventos() {
       return;
     }
 
+    if (parsedUser.precisaTrocarSenha) {
+      navigate("/primeiro-acesso");
+      return;
+    }
+
     setUser(parsedUser);
 
     apiFetch(`${API_URL}/horas/aluno/${parsedUser.id}`)

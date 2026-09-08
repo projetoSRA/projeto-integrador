@@ -2,9 +2,10 @@ import { Router } from "express";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcrypt";
 import crypto from "crypto";
-import { db } from "../db.js";
-import { JWT_SECRET } from "../config/env.js";
-import { simpleRateLimit } from "../middleware/rateLimit.js";
+import { db } from "../db";
+import { JWT_SECRET } from "../config/env";
+import { simpleRateLimit } from "../middleware/rateLimit";
+import { requireAuth } from "../middleware/auth";
 
 const router = Router();
 
@@ -35,6 +36,7 @@ router.post("/login", loginRateLimit, async (req, res) => {
         u.login,
         u.senha,
         u.tipo_usuario,
+        u.precisa_trocar_senha,
 
         a.id_aluno,
         a.nome AS nome_aluno,
@@ -75,6 +77,12 @@ router.post("/login", loginRateLimit, async (req, res) => {
     }
 
     const usuario = result.rows[0];
+
+    if (!usuario.senha) {
+      return res.status(401).json({
+        message: "Esta conta ainda não tem senha definida. Fale com a coordenação.",
+      });
+    }
 
     let senhaValida = false;
     // Indica se a senha validada não estava em bcrypt, para reforçarmos o
@@ -134,6 +142,7 @@ router.post("/login", loginRateLimit, async (req, res) => {
         nivel_ensino: usuario.nivel_ensino,
         curso: usuario.curso,
         serie_semestre: usuario.serie_semestre,
+        precisaTrocarSenha: usuario.precisa_trocar_senha,
       };
     }
 
@@ -183,6 +192,35 @@ router.post("/login", loginRateLimit, async (req, res) => {
     return res.status(500).json({
       message: "Erro interno no servidor.",
     });
+  }
+});
+
+// Define a senha definitiva no primeiro acesso (ou qualquer troca de senha
+// posterior). Exige estar logado — o aluno só chega aqui depois de validar
+// a senha padrão de primeiro acesso no /login, então não pedimos a senha
+// atual de novo, só a nova (duas vezes, para confirmação, no frontend).
+router.post("/definir-senha", requireAuth, async (req, res) => {
+  try {
+    const { novaSenha } = req.body;
+    const idUsuario = req.auth!.id_usuario;
+
+    if (!novaSenha || String(novaSenha).length < 6) {
+      return res.status(400).json({
+        message: "A nova senha deve ter no mínimo 6 caracteres.",
+      });
+    }
+
+    const hash = await bcrypt.hash(String(novaSenha), 10);
+
+    await db.query(
+      `UPDATE public.usuario SET senha = $1, precisa_trocar_senha = false WHERE id_usuario = $2`,
+      [hash, idUsuario]
+    );
+
+    return res.json({ message: "Senha definida com sucesso." });
+  } catch (error) {
+    console.error("Erro ao definir senha:", error);
+    return res.status(500).json({ message: "Erro ao definir senha." });
   }
 });
 

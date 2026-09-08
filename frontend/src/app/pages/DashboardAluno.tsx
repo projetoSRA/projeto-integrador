@@ -75,6 +75,11 @@ export default function DashboardAluno() {
       return;
     }
 
+    if (parsedUser.precisaTrocarSenha) {
+      navigate("/primeiro-acesso");
+      return;
+    }
+
     setUser(parsedUser);
 
     apiFetch(`${API_URL}/horas/aluno/${parsedUser.id}`)

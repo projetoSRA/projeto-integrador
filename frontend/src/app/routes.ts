@@ -8,11 +8,16 @@ import Eventos from "./pages/Eventos";
 import Certificados from "./pages/Certificados"; // 👈 ADICIONE ISSO
 import CoordenacaoAlunos from "./pages/CoordenacaoAlunos";
 import CoordenacaoAlunoDetalhe from "./pages/CoordenacaoAlunoDetalhe";
+import PrimeiroAcesso from "./pages/PrimeiroAcesso";
 
 export const router = createBrowserRouter([
   {
     path: "/",
     Component: Login,
+  },
+  {
+    path: "/primeiro-acesso",
+    Component: PrimeiroAcesso,
   },
   {
     path: "/aluno",

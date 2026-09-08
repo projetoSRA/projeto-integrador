@@ -81,8 +81,9 @@ if (userType === "empresa") {
         toast.success(result.message);
         saveSession(result.user, result.token);
 
-        if (userType === "aluno") navigate("/aluno");
-        else if (userType === "coordenacao") navigate("/coordenacao");
+        if (userType === "aluno") {
+          navigate(result.user.precisaTrocarSenha ? "/primeiro-acesso" : "/aluno");
+        } else if (userType === "coordenacao") navigate("/coordenacao");
         else navigate("/empresa");
       } else {
         toast.error(result.message);

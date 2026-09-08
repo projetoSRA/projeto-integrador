@@ -93,6 +93,11 @@ export default function Certificados() {
       return;
     }
 
+    if (parsedUser.precisaTrocarSenha) {
+      navigate("/primeiro-acesso");
+      return;
+    }
+
     setUser(parsedUser);
   }, [navigate]);
 
