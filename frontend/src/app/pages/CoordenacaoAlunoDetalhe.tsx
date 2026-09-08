@@ -2,8 +2,9 @@ import { useEffect, useState } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import CoordenacaoLayout from "../components/CoordenacaoLayout";
 import { User } from "../utils/auth";
-import { apiFetch, clearSession } from "../utils/api";
+import { apiFetch } from "../utils/api";
 import { panelStyle, cardStyle } from "../../styles/uiStyles";
 import {
   ArrowLeft,
@@ -11,7 +12,6 @@ import {
   CalendarDays,
   Eye,
   FileBadge2,
-  LogOut,
   Mic2,
   Plus,
   Trash2,
@@ -189,11 +189,6 @@ export default function CoordenacaoAlunoDetalhe() {
     carregarAba();
   }, [user, idAluno, aba]);
 
-  const handleLogout = () => {
-    clearSession();
-    navigate("/");
-  };
-
   const abrirModalVisita = () => {
     setLocal("");
     setHorasVisita("");
@@ -266,89 +261,54 @@ export default function CoordenacaoAlunoDetalhe() {
   if (!user) return null;
 
   return (
-    <div className="size-full p-4" style={{ background: "#15182e" }}>
-      <div className="max-w-7xl mx-auto">
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 p-4 sm:p-6 bg-white rounded-lg shadow">
-          <div className="flex items-center gap-3">
-            <UserRound className="size-8 text-primary shrink-0" />
-            <div>
-              <h1 className="text-xl sm:text-2xl font-semibold">
-                {carregandoAluno ? "Carregando..." : aluno?.nome || "Aluno"}
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Perfil de horas e participações
-              </p>
-            </div>
-          </div>
-
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button
-              onClick={() => navigate("/coordenacao/alunos")}
-              variant="outline"
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2"
-            >
-              <ArrowLeft className="size-4" />
-              Voltar
-            </Button>
-
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2"
-            >
-              <LogOut className="size-4" />
-              Sair
-            </Button>
-          </div>
-        </header>
-
+    <>
+    <CoordenacaoLayout
+      user={user}
+      activePage="alunos"
+      icon={UserRound}
+      title={carregandoAluno ? "Carregando..." : aluno?.nome || "Aluno"}
+      subtitle="Perfil de horas e participações"
+      headerActions={
+        <Button
+          onClick={() => navigate("/coordenacao/alunos")}
+          className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl text-white bg-white/10 hover:bg-white/15 border border-white/10"
+        >
+          <ArrowLeft className="size-4" />
+          Voltar
+        </Button>
+      }
+    >
         {aluno && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm text-muted-foreground font-medium">
-                  {aluno.nivel_ensino === "FACULDADE" ? "RA" : "RM"}
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold">
-                  {(aluno.nivel_ensino === "FACULDADE" ? aluno.ra : aluno.rm) || "-"}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl bg-white/10 p-5 border border-white/10" style={cardStyle}>
+              <p className="text-sm text-white/70 font-medium mb-1">
+                {aluno.nivel_ensino === "FACULDADE" ? "RA" : "RM"}
+              </p>
+              <p className="text-2xl font-semibold text-white">
+                {(aluno.nivel_ensino === "FACULDADE" ? aluno.ra : aluno.rm) || "-"}
+              </p>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm text-muted-foreground font-medium">
-                  Total de palestras no ano
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold">{aluno.totalPalestrasNoAno}</p>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl bg-white/10 p-5 border border-white/10" style={cardStyle}>
+              <p className="text-sm text-white/70 font-medium mb-1">
+                Total de palestras no ano
+              </p>
+              <p className="text-2xl font-semibold text-white">{aluno.totalPalestrasNoAno}</p>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm text-muted-foreground font-medium">
-                  Palestras que participou
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold">{aluno.eventosParticipados}</p>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl bg-white/10 p-5 border border-white/10" style={cardStyle}>
+              <p className="text-sm text-white/70 font-medium mb-1">
+                Palestras que participou
+              </p>
+              <p className="text-2xl font-semibold text-white">{aluno.eventosParticipados}</p>
+            </div>
 
-            <Card>
-              <CardHeader>
-                <CardTitle className="text-sm text-muted-foreground font-medium">
-                  Total de horas
-                </CardTitle>
-              </CardHeader>
-              <CardContent>
-                <p className="text-2xl font-semibold">{Number(aluno.totalHoras || 0)}h</p>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl bg-white/10 p-5 border border-white/10" style={cardStyle}>
+              <p className="text-sm text-white/70 font-medium mb-1">
+                Total de horas
+              </p>
+              <p className="text-2xl font-semibold text-white">{Number(aluno.totalHoras || 0)}h</p>
+            </div>
           </div>
         )}
 
@@ -599,9 +559,9 @@ export default function CoordenacaoAlunoDetalhe() {
             )}
           </CardContent>
         </Card>
-      </div>
+    </CoordenacaoLayout>
 
-      {modalVisitaAberto && (
+    {modalVisitaAberto && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-lg rounded-2xl p-6 shadow-xl" style={panelStyle}>
             <div className="flex items-center justify-between mb-5">
@@ -689,6 +649,6 @@ export default function CoordenacaoAlunoDetalhe() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }

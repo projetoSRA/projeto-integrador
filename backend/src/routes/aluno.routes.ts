@@ -1,14 +1,16 @@
 import { Router } from "express";
 import multer from "multer";
 import ExcelJS from "exceljs";
-import { db } from "../db.js";
-import { supabase } from "../supabase.js";
+import bcrypt from "bcrypt";
+import { db } from "../db";
+import { supabase } from "../supabase";
 import {
   requireAuth,
   requireRole,
   requireSelfAlunoOrCoordenacao,
-} from "../middleware/auth.js";
-import { matchesDeclaredType } from "../utils/fileSignature.js";
+} from "../middleware/auth";
+import { matchesDeclaredType } from "../utils/fileSignature";
+import { SENHA_PADRAO_PRIMEIRO_ACESSO } from "../utils/authDefaults";
 
 const XLSX_MIMETYPE =
   "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
@@ -43,6 +45,7 @@ router.get("/", requireAuth, requireRole("COORDENACAO"), async (req, res) => {
         COALESCE(cert.horas_certificados, 0) + COALESCE(cert.horas_relatorios, 0)
           + COALESCE(ev.horas_eventos, 0) + COALESCE(vis.horas_visitas, 0) AS total_horas,
         COALESCE(ev.total_eventos, 0)::int AS total_eventos,
+        COALESCE(cert.pendentes, 0)::int AS pendentes_count,
         GREATEST(cert.ultima_data, ev.ultima_data, vis.ultima_data) AS ultima_atividade
       FROM public.aluno a
       LEFT JOIN (
@@ -50,6 +53,7 @@ router.get("/", requireAuth, requireRole("COORDENACAO"), async (req, res) => {
           id_aluno,
           SUM(horas_aprovadas) FILTER (WHERE tipo_arquivo = 'CERTIFICADO' AND status_certificado = 'APROVADO') AS horas_certificados,
           SUM(horas_aprovadas) FILTER (WHERE tipo_arquivo = 'RELATORIO' AND status_certificado = 'APROVADO') AS horas_relatorios,
+          COUNT(*) FILTER (WHERE status_certificado = 'PENDENTE') AS pendentes,
           MAX(criado_em) AS ultima_data
         FROM public.certificados
         GROUP BY id_aluno
@@ -295,9 +299,10 @@ function extrairMetadadosTurma(texto: string) {
 // correspondente no modelo de dados atual).
 //
 // Alunos com RM já cadastrado têm nome/curso/série atualizados; RMs novos
-// geram um cadastro de aluno + um usuário do tipo ALUNO sem senha (mesmo
-// estado de uma conta criada manualmente pela coordenação — o aluno só
-// consegue logar depois que uma senha for definida).
+// geram um cadastro de aluno + um usuário do tipo ALUNO com a senha padrão
+// de primeiro acesso (SENHA_PADRAO_PRIMEIRO_ACESSO) e precisa_trocar_senha
+// = true — o aluno loga com ela uma vez e o frontend obriga a troca antes
+// de liberar o resto do app (ver POST /auth/definir-senha).
 router.post(
   "/importar-planilha",
   requireAuth,
@@ -412,6 +417,8 @@ router.post(
         });
       }
 
+      const senhaPadraoHash = await bcrypt.hash(SENHA_PADRAO_PRIMEIRO_ACESSO, 10);
+
       const client = await db.connect();
       let criados = 0;
       let atualizados = 0;
@@ -439,8 +446,12 @@ router.post(
             atualizados++;
           } else {
             const novoUsuario = await client.query(
-              `INSERT INTO public.usuario (login, senha, tipo_usuario) VALUES ($1, NULL, 'ALUNO') RETURNING id_usuario`,
-              [rm]
+              `
+              INSERT INTO public.usuario (login, senha, tipo_usuario, precisa_trocar_senha)
+              VALUES ($1, $2, 'ALUNO', true)
+              RETURNING id_usuario
+              `,
+              [rm, senhaPadraoHash]
             );
             const idUsuario = novoUsuario.rows[0].id_usuario;
 

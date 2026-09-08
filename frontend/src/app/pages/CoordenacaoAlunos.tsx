@@ -2,10 +2,11 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import CoordenacaoLayout from "../components/CoordenacaoLayout";
 import { User } from "../utils/auth";
-import { apiFetch, clearSession } from "../utils/api";
+import { apiFetch } from "../utils/api";
 import { panelStyle, cardStyle } from "../../styles/uiStyles";
-import { ArrowLeft, Clock, LogOut, Search, Upload, Users } from "lucide-react";
+import { Clock, Search, Upload, Users } from "lucide-react";
 
 type ResultadoImportacao = {
   message: string;
@@ -34,8 +35,13 @@ type AlunoResumo = {
   serie_semestre: string | null;
   total_horas: number;
   total_eventos: number;
+  pendentes_count: number;
   ultima_atividade: string | null;
 };
+
+const LIMITE_POUCAS_HORAS = 5;
+
+type FiltroSituacao = "todos" | "pendencias" | "poucas_horas" | "sem_horas";
 
 function formatarData(dataISO: string | null) {
   if (!dataISO) return "-";
@@ -58,6 +64,9 @@ export default function CoordenacaoAlunos() {
   const [loading, setLoading] = useState(true);
   const [busca, setBusca] = useState("");
   const [recarregarContador, setRecarregarContador] = useState(0);
+
+  const [turmaFiltro, setTurmaFiltro] = useState("todas");
+  const [situacaoFiltro, setSituacaoFiltro] = useState<FiltroSituacao>("todos");
 
   const inputPlanilhaRef = useRef<HTMLInputElement | null>(null);
   const [importando, setImportando] = useState(false);
@@ -107,12 +116,41 @@ export default function CoordenacaoAlunos() {
     return () => clearTimeout(timeoutId);
   }, [user, busca, recarregarContador]);
 
-  const totalAlunos = useMemo(() => alunos.length, [alunos]);
+  const turmas = useMemo(() => {
+    const unicas = new Set(
+      alunos
+        .map((a) => a.serie_semestre)
+        .filter((serie): serie is string => Boolean(serie))
+    );
+    return Array.from(unicas).sort();
+  }, [alunos]);
 
-  const handleLogout = () => {
-    clearSession();
-    navigate("/");
-  };
+  const alunosFiltrados = useMemo(() => {
+    return alunos.filter((aluno) => {
+      if (turmaFiltro !== "todas" && aluno.serie_semestre !== turmaFiltro) {
+        return false;
+      }
+
+      if (situacaoFiltro === "pendencias" && aluno.pendentes_count <= 0) {
+        return false;
+      }
+
+      if (
+        situacaoFiltro === "poucas_horas" &&
+        !(aluno.total_horas > 0 && aluno.total_horas < LIMITE_POUCAS_HORAS)
+      ) {
+        return false;
+      }
+
+      if (situacaoFiltro === "sem_horas" && Number(aluno.total_horas) !== 0) {
+        return false;
+      }
+
+      return true;
+    });
+  }, [alunos, turmaFiltro, situacaoFiltro]);
+
+  const totalAlunos = useMemo(() => alunosFiltrados.length, [alunosFiltrados]);
 
   const handleSelecionarPlanilha = () => {
     setErroImportacao(null);
@@ -159,58 +197,32 @@ export default function CoordenacaoAlunos() {
   if (!user) return null;
 
   return (
-    <div className="size-full p-4" style={{ background: "#15182e" }}>
-      <div className="max-w-7xl mx-auto">
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 p-4 sm:p-6 bg-white rounded-lg shadow">
-          <div className="flex items-center gap-3">
-            <Users className="size-8 text-primary shrink-0" />
-            <div>
-              <h1 className="text-xl sm:text-2xl font-semibold">Alunos</h1>
-              <p className="text-sm text-muted-foreground">
-                Consulte o histórico de horas de cada aluno
-              </p>
-            </div>
-          </div>
+    <CoordenacaoLayout
+      user={user}
+      activePage="alunos"
+      title="Alunos"
+      subtitle="Consulte o histórico de horas de cada aluno"
+      headerActions={
+        <>
+          <input
+            ref={inputPlanilhaRef}
+            type="file"
+            accept=".xlsx"
+            className="hidden"
+            onChange={handleArquivoSelecionado}
+          />
 
-          <div className="flex gap-2 w-full sm:w-auto">
-            <input
-              ref={inputPlanilhaRef}
-              type="file"
-              accept=".xlsx"
-              className="hidden"
-              onChange={handleArquivoSelecionado}
-            />
-
-            <Button
-              onClick={handleSelecionarPlanilha}
-              disabled={importando}
-              variant="outline"
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2"
-            >
-              <Upload className="size-4" />
-              {importando ? "Importando..." : "Importar planilha"}
-            </Button>
-
-            <Button
-              onClick={() => navigate("/coordenacao")}
-              variant="outline"
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2"
-            >
-              <ArrowLeft className="size-4" />
-              Voltar
-            </Button>
-
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2"
-            >
-              <LogOut className="size-4" />
-              Sair
-            </Button>
-          </div>
-        </header>
-
+          <Button
+            onClick={handleSelecionarPlanilha}
+            disabled={importando}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl text-white bg-white/10 hover:bg-white/15 border border-white/10"
+          >
+            <Upload className="size-4" />
+            {importando ? "Importando..." : "Importar planilha"}
+          </Button>
+        </>
+      }
+    >
         {(resultadoImportacao || erroImportacao) && (
           <Card className="rounded-2xl border-0 shadow mb-6" style={panelStyle}>
             <CardContent className="pt-6">
@@ -276,6 +288,32 @@ export default function CoordenacaoAlunos() {
                 />
               </div>
             </CardTitle>
+
+            <div className="flex flex-col sm:flex-row gap-3 pt-3">
+              <select
+                value={turmaFiltro}
+                onChange={(e) => setTurmaFiltro(e.target.value)}
+                className="w-full sm:w-auto rounded-xl bg-white/10 border border-white/10 py-2 px-3 text-white outline-none [&>option]:bg-[#2f3147]"
+              >
+                <option value="todas">Todas as turmas</option>
+                {turmas.map((turma) => (
+                  <option key={turma} value={turma}>
+                    {turma}
+                  </option>
+                ))}
+              </select>
+
+              <select
+                value={situacaoFiltro}
+                onChange={(e) => setSituacaoFiltro(e.target.value as FiltroSituacao)}
+                className="w-full sm:w-auto rounded-xl bg-white/10 border border-white/10 py-2 px-3 text-white outline-none [&>option]:bg-[#2f3147]"
+              >
+                <option value="todos">Todas as situações</option>
+                <option value="pendencias">Com atividades pendentes</option>
+                <option value="poucas_horas">Poucas horas (menos de {LIMITE_POUCAS_HORAS}h)</option>
+                <option value="sem_horas">Sem horas registradas</option>
+              </select>
+            </div>
           </CardHeader>
 
           <CardContent>
@@ -285,21 +323,21 @@ export default function CoordenacaoAlunos() {
               </div>
             )}
 
-            {!loading && alunos.length === 0 && (
+            {!loading && alunosFiltrados.length === 0 && (
               <div className="rounded-2xl bg-white/10 p-8 text-center">
                 <Users className="size-10 text-white/70 mx-auto mb-3" />
                 <h3 className="text-white text-lg font-semibold mb-1">
                   Nenhum aluno encontrado
                 </h3>
                 <p className="text-white/70">
-                  Ajuste a busca ou aguarde novos cadastros.
+                  Ajuste a busca ou os filtros aplicados.
                 </p>
               </div>
             )}
 
-            {!loading && alunos.length > 0 && (
+            {!loading && alunosFiltrados.length > 0 && (
               <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
-                {alunos.map((aluno) => (
+                {alunosFiltrados.map((aluno) => (
                   <button
                     key={aluno.id_aluno}
                     type="button"
@@ -308,12 +346,18 @@ export default function CoordenacaoAlunos() {
                     style={cardStyle}
                   >
                     <div className="flex items-start justify-between gap-4 mb-3">
-                      <div>
-                        <h3 className="text-white font-semibold text-lg">
+                      <div className="min-w-0">
+                        <h3 className="text-white font-semibold text-lg break-words">
                           {aluno.nome}
                         </h3>
-                        <p className="text-white/70 text-sm">{aluno.email}</p>
+                        <p className="text-white/70 text-sm break-words">{aluno.email}</p>
                       </div>
+
+                      {aluno.pendentes_count > 0 && (
+                        <span className="shrink-0 rounded-full bg-amber-500/20 text-amber-300 text-xs font-semibold px-2.5 py-1">
+                          {aluno.pendentes_count} pendente(s)
+                        </span>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-2 gap-2 text-sm">
@@ -349,7 +393,6 @@ export default function CoordenacaoAlunos() {
             )}
           </CardContent>
         </Card>
-      </div>
-    </div>
+    </CoordenacaoLayout>
   );
 }

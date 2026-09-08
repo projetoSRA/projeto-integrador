@@ -7,16 +7,15 @@ import {
   CardTitle,
 } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import CoordenacaoLayout from "../components/CoordenacaoLayout";
 import { User } from "../utils/auth";
-import { apiFetch, clearSession } from "../utils/api";
+import { apiFetch } from "../utils/api";
 import { panelStyle, cardStyle } from "../../styles/uiStyles";
 import {
   CheckCircle2,
   Clock,
   Eye,
   History,
-  LogOut,
-  Users,
   X,
   XCircle,
 } from "lucide-react";
@@ -177,11 +176,6 @@ export default function DashboardCoordenacao() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [aba, user]);
 
-  const handleLogout = () => {
-    clearSession();
-    navigate("/");
-  };
-
   const aprovar = async (item: Pendente) => {
     if (!user) return;
 
@@ -272,72 +266,15 @@ export default function DashboardCoordenacao() {
   if (!user) return null;
 
   return (
-    <div className="size-full p-4" style={{ background: "#15182e" }}>
-      <div className="max-w-7xl mx-auto">
-        <header className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8 p-4 sm:p-6 bg-white rounded-lg shadow">
-          <div className="flex items-center gap-3">
-            <Users className="size-8 text-primary shrink-0" />
-            <div>
-              <h1 className="text-xl sm:text-2xl font-semibold">Dashboard da Coordenação</h1>
-              <p className="text-sm text-muted-foreground">
-                Bem-vindo(a), {user.name}
-              </p>
-            </div>
-          </div>
-          <div className="flex gap-2 w-full sm:w-auto">
-            <Button
-              onClick={() => navigate("/coordenacao/alunos")}
-              variant="outline"
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2"
-            >
-              <Users className="size-4" />
-              Alunos
-            </Button>
-
-            <Button
-              onClick={handleLogout}
-              variant="outline"
-              className="flex-1 sm:flex-none flex items-center justify-center gap-2"
-            >
-              <LogOut className="size-4" />
-              Sair
-            </Button>
-          </div>
-        </header>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Minhas Informações</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-2">
-              <p>
-                <strong>Nome:</strong> {user.name}
-              </p>
-              <p>
-                <strong>Matrícula:</strong> {user.identifier}
-              </p>
-              <p>
-                <strong>ID:</strong> {user.id}
-              </p>
-            </CardContent>
-          </Card>
-
-          <Card className="md:col-span-2">
-            <CardHeader>
-              <CardTitle>Fila de validação</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <p className="text-muted-foreground">
-                {loadingPendentes
-                  ? "Carregando..."
-                  : `${pendentes.length} arquivo(s) aguardando aprovação.`}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-
-        <Card className="rounded-2xl border-0 shadow" style={panelStyle}>
+    <>
+    <CoordenacaoLayout
+      user={user}
+      activePage="dashboard"
+      title="Dashboard da Coordenação"
+      subtitle={`Bem-vindo(a), ${user.name}`}
+      pendentesCount={loadingPendentes ? undefined : pendentes.length}
+    >
+      <Card className="rounded-2xl border-0 shadow" style={panelStyle}>
           <CardHeader>
             <CardTitle className="text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <span className="flex items-center gap-2">
@@ -404,11 +341,11 @@ export default function DashboardCoordenacao() {
                         style={cardStyle}
                       >
                         <div className="flex items-start justify-between gap-4 mb-3">
-                          <div>
-                            <h3 className="text-white font-semibold text-lg">
+                          <div className="min-w-0">
+                            <h3 className="text-white font-semibold text-lg break-words">
                               {item.titulo}
                             </h3>
-                            <p className="text-white/70 text-sm">
+                            <p className="text-white/70 text-sm break-words">
                               {item.nome_aluno} · {item.email_aluno}
                             </p>
                           </div>
@@ -535,10 +472,10 @@ export default function DashboardCoordenacao() {
                         className="rounded-2xl bg-white/10 p-5 border border-white/10"
                         style={cardStyle}
                       >
-                        <h3 className="text-white font-semibold text-lg mb-1">
+                        <h3 className="text-white font-semibold text-lg mb-1 break-words">
                           {item.titulo}
                         </h3>
-                        <p className="text-white/70 text-sm mb-3">
+                        <p className="text-white/70 text-sm mb-3 break-words">
                           {item.nome_aluno}
                         </p>
 
@@ -568,7 +505,7 @@ export default function DashboardCoordenacao() {
                         </p>
 
                         {item.observacao && (
-                          <p className="text-white/70 text-sm">
+                          <p className="text-white/70 text-sm break-words">
                             Observação:{" "}
                             <span className="text-white">
                               {item.observacao}
@@ -583,9 +520,9 @@ export default function DashboardCoordenacao() {
             )}
           </CardContent>
         </Card>
-      </div>
+    </CoordenacaoLayout>
 
-      {rejeicaoAlvo && (
+    {rejeicaoAlvo && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div className="w-full max-w-md rounded-2xl p-6 shadow-xl" style={panelStyle}>
             <div className="flex items-center justify-between mb-5">
@@ -638,6 +575,6 @@ export default function DashboardCoordenacao() {
           </div>
         </div>
       )}
-    </div>
+    </>
   );
 }
