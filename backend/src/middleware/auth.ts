@@ -5,7 +5,7 @@
 // verificação do token e checagens de papel/posse (ownership) de recurso.
 import { Request, Response, NextFunction } from "express";
 import jwt from "jsonwebtoken";
-import { JWT_SECRET } from "../config/env.js";
+import { JWT_SECRET } from "../config/env";
 
 export type TipoUsuario = "ALUNO" | "COORDENACAO" | "EMPRESA";
 

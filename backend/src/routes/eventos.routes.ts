@@ -1,11 +1,11 @@
 import { Router } from "express";
-import { db } from "../db.js";
+import { db } from "../db";
 import {
   requireAuth,
   requireRole,
   requireSelfAlunoOrCoordenacao,
   requireSelfEmpresaOrCoordenacao,
-} from "../middleware/auth.js";
+} from "../middleware/auth";
 
 const router = Router();
 

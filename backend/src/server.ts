@@ -6,14 +6,14 @@ import path from "path";
 // se algo essencial estiver faltando (ex.: JWT_SECRET), o servidor falha
 // ao iniciar em vez de rodar com um segredo padrão previsível
 // (achado C4 do relatório de pentest).
-import { FRONTEND_URL, PORT } from "./config/env.js";
-import { securityHeaders } from "./middleware/securityHeaders.js";
+import { FRONTEND_URL, PORT } from "./config/env";
+import { securityHeaders } from "./middleware/securityHeaders";
 
 import authRoutes from "./routes/auth.routes";
 import alunoRoutes from "./routes/aluno.routes";
 import certificadosRoutes from "./routes/certificados.routes";
 import eventosRoutes from "./routes/eventos.routes";
-import horasRoutes from "./routes/horas.routes.js";
+import horasRoutes from "./routes/horas.routes";
 import validacaoRoutes from "./routes/validacao.routes";
 import visitaRoutes from "./routes/visita.routes";
 

@@ -1,9 +1,9 @@
 import { Router } from "express";
 import multer from "multer";
-import { db } from "../db.js";
-import { supabase } from "../supabase.js";
-import { requireAuth, requireRole, requireSelfAlunoOrCoordenacao } from "../middleware/auth.js";
-import { matchesDeclaredType } from "../utils/fileSignature.js";
+import { db } from "../db";
+import { supabase } from "../supabase";
+import { requireAuth, requireRole, requireSelfAlunoOrCoordenacao } from "../middleware/auth";
+import { matchesDeclaredType } from "../utils/fileSignature";
 
 const router = Router();
 

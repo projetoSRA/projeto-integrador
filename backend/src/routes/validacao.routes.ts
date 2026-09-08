@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { db } from "../db.js";
-import { requireAuth, requireRole } from "../middleware/auth.js";
+import { db } from "../db";
+import { requireAuth, requireRole } from "../middleware/auth";
 
 const router = Router();
 
