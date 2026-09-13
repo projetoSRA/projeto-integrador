@@ -74,6 +74,9 @@ export default function Certificados() {
   const [titulo, setTitulo] = useState("");
   const [horas, setHoras] = useState("");
   const [data, setData] = useState("");
+  const [bimestre, setBimestre] = useState("");
+  const [local, setLocal] = useState("");
+  const [conteudo, setConteudo] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [salvando, setSalvando] = useState(false);
@@ -152,6 +155,9 @@ export default function Certificados() {
     setTitulo("");
     setHoras("");
     setData("");
+    setBimestre("");
+    setLocal("");
+    setConteudo("");
     setArquivo(null);
   };
 
@@ -207,6 +213,20 @@ export default function Certificados() {
       return false;
     }
 
+    if (!bimestre) {
+      alert("Selecione o bimestre.");
+      return false;
+    }
+
+    if (tipoSelecionado === "relatorio") {
+      if (!local.trim() || !conteudo.trim()) {
+        alert(
+          "Para relatórios, informe o local da atividade e o conteúdo do relato — é o texto usado para montar o Portfólio do Aluno automaticamente."
+        );
+        return false;
+      }
+    }
+
     return true;
   };
 
@@ -225,7 +245,13 @@ export default function Certificados() {
       formData.append("titulo", titulo);
       formData.append("horas", horas);
       formData.append("dataEmissao", data);
+      formData.append("bimestre", bimestre);
       formData.append("arquivo", arquivo);
+
+      if (tipoSelecionado === "relatorio") {
+        formData.append("local", local);
+        formData.append("conteudo", conteudo);
+      }
 
       const response = await apiFetch(`${API_URL}/certificados/upload`, {
         method: "POST",
@@ -506,6 +532,64 @@ export default function Certificados() {
                   className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
                 />
               </div>
+
+              <div>
+                <label className="block text-white mb-2">Bimestre</label>
+
+                <select
+                  value={bimestre}
+                  onChange={(e) => setBimestre(e.target.value)}
+                  required
+                  className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+                >
+                  <option value="" className="text-black">
+                    Selecione...
+                  </option>
+                  <option value="1" className="text-black">1º Bimestre</option>
+                  <option value="2" className="text-black">2º Bimestre</option>
+                  <option value="3" className="text-black">3º Bimestre</option>
+                  <option value="4" className="text-black">4º Bimestre</option>
+                </select>
+              </div>
+
+              {tipoSelecionado === "relatorio" && (
+                <>
+                  <div>
+                    <label className="block text-white mb-2">
+                      Local da atividade
+                    </label>
+
+                    <input
+                      type="text"
+                      value={local}
+                      onChange={(e) => setLocal(e.target.value)}
+                      required
+                      className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+                      placeholder="Ex: Auditório Fatec Ourinhos, Online via Youtube..."
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-white mb-2">
+                      Conteúdo do relatório
+                    </label>
+
+                    <textarea
+                      value={conteudo}
+                      onChange={(e) => setConteudo(e.target.value)}
+                      required
+                      rows={6}
+                      maxLength={10000}
+                      className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none resize-y"
+                      placeholder="Escreva o relato da atividade (pode incluir RESULTADOS e AGRADECIMENTOS, como no portfólio bimestral)."
+                    />
+
+                    <p className="text-white/60 text-sm mt-2">
+                      Esse texto é usado depois para montar o Portfólio do Aluno automaticamente.
+                    </p>
+                  </div>
+                </>
+              )}
 
               <div>
                 <label className="block text-white mb-2">Arquivo</label>

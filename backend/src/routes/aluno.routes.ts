@@ -26,6 +26,9 @@ const upload = multer({
 
 // Lista os alunos para a tela "Alunos" da coordenação, com busca opcional
 // por nome, RM ou RA e um resumo de horas/eventos de cada um.
+// A busca por nome usa unaccent() (extensão do Postgres) pra achar, por
+// exemplo, "SÉRGIO" buscando só "sergio" — sem isso, o acento tinha que
+// bater exatamente com o que está no banco.
 router.get("/", requireAuth, requireRole("COORDENACAO"), async (req, res) => {
   try {
     const busca = typeof req.query.busca === "string" ? req.query.busca.trim() : "";
@@ -75,7 +78,10 @@ router.get("/", requireAuth, requireRole("COORDENACAO"), async (req, res) => {
         GROUP BY id_aluno
       ) vis ON vis.id_aluno = a.id_aluno
       WHERE
-        $1 = '' OR a.nome ILIKE '%' || $1 || '%' OR a.rm ILIKE '%' || $1 || '%' OR a.ra ILIKE '%' || $1 || '%'
+        $1 = ''
+        OR unaccent(a.nome) ILIKE unaccent('%' || $1 || '%')
+        OR a.rm ILIKE '%' || $1 || '%'
+        OR a.ra ILIKE '%' || $1 || '%'
       ORDER BY a.nome ASC
       `,
       [busca]
@@ -100,7 +106,8 @@ router.get(
 
       const aluno = await db.query(
         `
-        SELECT id_aluno, nome, email, rm, ra, curso, nivel_ensino, serie_semestre, foto_perfil_url
+        SELECT id_aluno, nome, email, rm, ra, curso, nivel_ensino, serie_semestre, foto_perfil_url,
+               empresa_parceira_nome, empresa_parceira_representante
         FROM public.aluno
         WHERE id_aluno = $1
         `,
@@ -173,6 +180,54 @@ router.get(
     } catch (error) {
       console.error("Erro ao buscar aluno:", error);
       return res.status(500).json({ message: "Erro ao buscar aluno." });
+    }
+  }
+);
+
+// Dados da empresa parceira (usados no Portfólio do Aluno) são
+// administrativos — só a coordenação edita, o aluno só visualiza (mesma
+// lógica de "Nome do Coordenador de Curso" no documento oficial).
+router.patch(
+  "/:idAluno/empresa-parceira",
+  requireAuth,
+  requireRole("COORDENACAO"),
+  async (req, res) => {
+    try {
+      const { idAluno } = req.params;
+      const { empresaParceiraNome, empresaParceiraRepresentante } = req.body;
+
+      const nome = typeof empresaParceiraNome === "string" ? empresaParceiraNome.trim() : "";
+      const representante =
+        typeof empresaParceiraRepresentante === "string" ? empresaParceiraRepresentante.trim() : "";
+
+      if (nome.length > 255 || representante.length > 255) {
+        return res.status(400).json({
+          message: "Nome da empresa e representante devem ter no máximo 255 caracteres.",
+        });
+      }
+
+      const result = await db.query(
+        `
+        UPDATE public.aluno
+        SET empresa_parceira_nome = $1,
+            empresa_parceira_representante = $2
+        WHERE id_aluno = $3
+        RETURNING id_aluno, empresa_parceira_nome, empresa_parceira_representante
+        `,
+        [nome || null, representante || null, idAluno]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ message: "Aluno não encontrado." });
+      }
+
+      return res.json({
+        message: "Empresa parceira atualizada com sucesso.",
+        aluno: result.rows[0],
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar empresa parceira:", error);
+      return res.status(500).json({ message: "Erro ao atualizar empresa parceira." });
     }
   }
 );

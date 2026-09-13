@@ -16,6 +16,8 @@ import eventosRoutes from "./routes/eventos.routes";
 import horasRoutes from "./routes/horas.routes";
 import validacaoRoutes from "./routes/validacao.routes";
 import visitaRoutes from "./routes/visita.routes";
+import chatbotRoutes from "./routes/chatbot.routes";
+import portfolioRoutes from "./routes/portfolio.routes";
 
 const app = express();
 
@@ -41,6 +43,8 @@ app.use("/certificados", certificadosRoutes);
 app.use("/horas", horasRoutes);
 app.use("/validacao", validacaoRoutes);
 app.use("/visita", visitaRoutes);
+app.use("/chatbot", chatbotRoutes);
+app.use("/portfolio", portfolioRoutes);
 
 app.get("/", (req, res) => {
   res.json({ message: "Backend SRA rodando" });

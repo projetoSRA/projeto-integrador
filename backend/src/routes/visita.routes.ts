@@ -24,6 +24,7 @@ router.get(
           v.quantidade_horas,
           v.data_visita,
           v.observacao,
+          v.bimestre,
           v.criado_em
         FROM public.visita v
         WHERE v.id_aluno = $1
@@ -44,7 +45,7 @@ router.get(
 router.post("/", requireRole("COORDENACAO"), async (req, res) => {
   try {
     const idCoordenacao = req.auth!.id_coordenacao;
-    const { idAluno, local, quantidadeHoras, dataVisita, observacao } = req.body;
+    const { idAluno, local, quantidadeHoras, dataVisita, observacao, bimestre } = req.body;
 
     if (!idAluno || !local || !quantidadeHoras || !dataVisita) {
       return res.status(400).json({
@@ -60,6 +61,16 @@ router.post("/", requireRole("COORDENACAO"), async (req, res) => {
       });
     }
 
+    // O bimestre alimenta a geração automática do Portfólio do Aluno (ver
+    // certificados.routes.ts, que usa o mesmo campo para relatórios).
+    const numeroBimestre = Number(bimestre);
+
+    if (!bimestre || !Number.isInteger(numeroBimestre) || numeroBimestre < 1 || numeroBimestre > 4) {
+      return res.status(400).json({
+        message: "Informe o bimestre (1 a 4).",
+      });
+    }
+
     const result = await db.query(
       `
       INSERT INTO public.visita (
@@ -68,12 +79,13 @@ router.post("/", requireRole("COORDENACAO"), async (req, res) => {
         local,
         quantidade_horas,
         data_visita,
-        observacao
+        observacao,
+        bimestre
       )
-      VALUES ($1, $2, $3, $4, $5, $6)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
       RETURNING *
       `,
-      [idAluno, idCoordenacao, local, horas, dataVisita, observacao || null]
+      [idAluno, idCoordenacao, local, horas, dataVisita, observacao || null, numeroBimestre]
     );
 
     return res.status(201).json({
