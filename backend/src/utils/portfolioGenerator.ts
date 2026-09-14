@@ -28,12 +28,15 @@ export type PortfolioAluno = {
   empresaParceiraRepresentante: string | null;
 };
 
+export type CategoriaRelatorio = "PALESTRA" | "CURSO" | "VISITA";
+
 export type PortfolioRelatorio = {
   local: string;
   data: string; // já formatada dd/mm/aaaa
   horas: number;
   titulo: string;
   conteudo: string;
+  categoria: CategoriaRelatorio;
 };
 
 export type PortfolioVisita = {
@@ -171,21 +174,38 @@ function tabelaVisitas(visitas: PortfolioVisita[]) {
 export async function gerarPortfolioDocx(dados: PortfolioDados): Promise<Buffer> {
   const { aluno, coordenador, bimestre, relatorios, visitas } = dados;
 
+  function secaoVazia(mensagem: string): Paragraph[] {
+    return [
+      new Paragraph({
+        spacing: { after: 150 },
+        children: [new TextRun({ text: mensagem, italics: true, color: "666666" })],
+      }),
+    ];
+  }
+
+  // Cada relatório aprovado é classificado pelo aluno no envio (Palestra,
+  // Curso ou Visita) — isso é o que permite montar seções separadas no
+  // documento em vez de jogar tudo em "Palestras", como era antes desse
+  // campo existir.
+  const porCategoria = (categoria: CategoriaRelatorio) =>
+    relatorios.filter((r) => r.categoria === categoria);
+
+  const relatoriosPalestra = porCategoria("PALESTRA");
+  const relatoriosCurso = porCategoria("CURSO");
+  const relatoriosVisita = porCategoria("VISITA");
+
   const secaoPalestras =
-    relatorios.length > 0
-      ? relatorios.flatMap((r) => blocoRelatorio(r, aluno))
-      : [
-          new Paragraph({
-            spacing: { after: 150 },
-            children: [
-              new TextRun({
-                text: "Nenhum relatório aprovado neste bimestre até o momento.",
-                italics: true,
-                color: "666666",
-              }),
-            ],
-          }),
-        ];
+    relatoriosPalestra.length > 0
+      ? relatoriosPalestra.flatMap((r) => blocoRelatorio(r, aluno))
+      : secaoVazia("Nenhum relatório de palestra aprovado neste bimestre até o momento.");
+
+  const secaoCursos =
+    relatoriosCurso.length > 0
+      ? relatoriosCurso.flatMap((r) => blocoRelatorio(r, aluno))
+      : secaoVazia("Nenhum relatório de curso aprovado neste bimestre até o momento.");
+
+  const secaoVisitasRelatorios =
+    relatoriosVisita.length > 0 ? relatoriosVisita.flatMap((r) => blocoRelatorio(r, aluno)) : [];
 
   const doc = new Document({
     sections: [
@@ -274,22 +294,23 @@ export async function gerarPortfolioDocx(dados: PortfolioDados): Promise<Buffer>
           }),
           visitas.length > 0
             ? tabelaVisitas(visitas)
-            : new Paragraph({
-                spacing: { after: 150 },
-                children: [
-                  new TextRun({
-                    text: "Nenhuma visita técnica registrada neste bimestre.",
-                    italics: true,
-                    color: "666666",
-                  }),
-                ],
-              }),
+            : secaoVazia("Nenhuma visita técnica registrada pela coordenação neste bimestre.")[0],
+          ...(secaoVisitasRelatorios.length > 0
+            ? secaoVisitasRelatorios
+            : secaoVazia("Nenhum relatório de visita aprovado neste bimestre até o momento.")),
+          separador(),
+
+          new Paragraph({
+            spacing: { after: 150 },
+            children: [new TextRun({ text: "Cursos flexíveis", bold: true, underline: {} })],
+          }),
+          ...secaoCursos,
 
           new Paragraph({
             spacing: { before: 300 },
             children: [
               new TextRun({
-                text: "Cursos flexíveis, Outras atividades, Acompanhamento da coordenação, Acompanhamento da empresa parceira, Parecer final e Feedback ao aluno seguem sendo preenchidos manualmente no documento oficial.",
+                text: "Outras atividades, Acompanhamento da coordenação, Acompanhamento da empresa parceira, Parecer final e Feedback ao aluno seguem sendo preenchidos manualmente no documento oficial.",
                 italics: true,
                 color: "666666",
               }),

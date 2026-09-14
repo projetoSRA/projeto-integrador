@@ -184,6 +184,57 @@ router.get(
   }
 );
 
+// Define a mesma empresa parceira para todos os alunos de uma turma
+// (serie_semestre) de uma vez. Precisa vir ANTES de "/:idAluno/empresa-
+// parceira" — senão o Express trataria "turma" como se fosse um idAluno.
+router.patch(
+  "/turma/empresa-parceira",
+  requireAuth,
+  requireRole("COORDENACAO"),
+  async (req, res) => {
+    try {
+      const { serieSemestre, empresaParceiraNome, empresaParceiraRepresentante } = req.body;
+
+      if (!serieSemestre || typeof serieSemestre !== "string" || !serieSemestre.trim()) {
+        return res.status(400).json({ message: "Selecione a turma." });
+      }
+
+      const nome = typeof empresaParceiraNome === "string" ? empresaParceiraNome.trim() : "";
+      const representante =
+        typeof empresaParceiraRepresentante === "string" ? empresaParceiraRepresentante.trim() : "";
+
+      if (nome.length > 255 || representante.length > 255) {
+        return res.status(400).json({
+          message: "Nome da empresa e representante devem ter no máximo 255 caracteres.",
+        });
+      }
+
+      const result = await db.query(
+        `
+        UPDATE public.aluno
+        SET empresa_parceira_nome = $1,
+            empresa_parceira_representante = $2
+        WHERE serie_semestre = $3
+        RETURNING id_aluno
+        `,
+        [nome || null, representante || null, serieSemestre]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ message: "Nenhum aluno encontrado nessa turma." });
+      }
+
+      return res.json({
+        message: `Empresa parceira atualizada para ${result.rowCount} aluno(s) da turma.`,
+        totalAlunos: result.rowCount,
+      });
+    } catch (error) {
+      console.error("Erro ao atualizar empresa parceira da turma:", error);
+      return res.status(500).json({ message: "Erro ao atualizar empresa parceira da turma." });
+    }
+  }
+);
+
 // Dados da empresa parceira (usados no Portfólio do Aluno) são
 // administrativos — só a coordenação edita, o aluno só visualiza (mesma
 // lógica de "Nome do Coordenador de Curso" no documento oficial).

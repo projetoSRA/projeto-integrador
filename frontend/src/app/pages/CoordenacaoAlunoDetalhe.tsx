@@ -722,7 +722,7 @@ export default function CoordenacaoAlunoDetalhe() {
 
     {modalVisitaAberto && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-lg rounded-2xl p-6 shadow-xl" style={panelStyle}>
+          <div className="w-full max-w-lg max-h-[90vh] rounded-2xl p-6 shadow-xl overflow-y-auto" style={panelStyle}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                 <CalendarDays className="size-5" />

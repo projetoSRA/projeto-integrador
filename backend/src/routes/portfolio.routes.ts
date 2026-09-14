@@ -51,7 +51,7 @@ router.get(
 
       const relatoriosResult = await db.query(
         `
-        SELECT titulo, local, conteudo, data_emissao, horas_aprovadas
+        SELECT titulo, local, conteudo, data_emissao, horas_aprovadas, categoria
         FROM public.certificados
         WHERE id_aluno = $1
           AND tipo_arquivo = 'RELATORIO'
@@ -89,6 +89,10 @@ router.get(
           horas: Number(r.horas_aprovadas),
           titulo: r.titulo,
           conteudo: r.conteudo || "",
+          // Relatórios enviados antes desse campo existir não têm
+          // categoria — tratamos como PALESTRA pra manter o comportamento
+          // de antes (todos caíam na mesma seção) em vez de sumir do documento.
+          categoria: (r.categoria || "PALESTRA") as "PALESTRA" | "CURSO" | "VISITA",
         })),
         visitas: visitasResult.rows.map((v) => ({
           local: v.local,

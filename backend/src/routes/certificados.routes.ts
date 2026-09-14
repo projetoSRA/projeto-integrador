@@ -20,6 +20,16 @@ function normalizarTipo(tipo: string) {
   return tipo === "relatorio" ? "RELATORIO" : "CERTIFICADO";
 }
 
+// Classificação do relatório (só se aplica a tipo_arquivo = 'RELATORIO'),
+// usada pelo gerador do Portfólio do Aluno pra separar os relatórios
+// aprovados em seções ("Palestras", "Cursos flexíveis", "Visitas
+// técnicas") em vez de jogar tudo numa seção só.
+const CATEGORIAS_RELATORIO = ["PALESTRA", "CURSO", "VISITA"];
+
+function normalizarCategoria(categoria: unknown): string {
+  return typeof categoria === "string" ? categoria.trim().toUpperCase() : "";
+}
+
 function validarArquivo(tipo: string, file: Express.Multer.File) {
   const mime = file.mimetype;
 
@@ -72,6 +82,7 @@ router.get(
         local,
         conteudo,
         bimestre,
+        categoria,
         criado_em
       FROM public.certificados
       WHERE id_aluno = $1
@@ -101,7 +112,7 @@ router.post(
   async (req, res) => {
     try {
       const idAluno = req.auth!.id_aluno;
-      const { tipo, titulo, horas, dataEmissao, local, conteudo, bimestre } = req.body;
+      const { tipo, titulo, horas, dataEmissao, local, conteudo, bimestre, categoria } = req.body;
       const file = req.file;
 
       if (!idAluno || !tipo || !titulo || !horas || !dataEmissao || !file) {
@@ -138,6 +149,7 @@ router.post(
 
       const localTexto = typeof local === "string" ? local.trim() : "";
       const conteudoTexto = typeof conteudo === "string" ? conteudo.trim() : "";
+      const categoriaTexto = normalizarCategoria(categoria);
 
       if (tipoArquivo === "RELATORIO") {
         if (!localTexto || !conteudoTexto) {
@@ -155,6 +167,12 @@ router.post(
         if (conteudoTexto.length > 10000) {
           return res.status(400).json({
             message: "O conteúdo do relatório deve ter no máximo 10000 caracteres.",
+          });
+        }
+
+        if (!CATEGORIAS_RELATORIO.includes(categoriaTexto)) {
+          return res.status(400).json({
+            message: "Selecione a categoria do relatório (Palestra, Curso ou Visita).",
           });
         }
       }
@@ -224,11 +242,12 @@ router.post(
         horas_aprovadas,
         local,
         conteudo,
-        bimestre
+        bimestre,
+        categoria
       )
       VALUES (
         $1, NULL, $2, $3, $4, $5, $6,
-        'PENDENTE', $7, $8, $9, $10, $11, $12, 0, $13, $14, $15
+        'PENDENTE', $7, $8, $9, $10, $11, $12, 0, $13, $14, $15, $16
       )
       RETURNING *
       `,
@@ -248,6 +267,7 @@ router.post(
           tipoArquivo === "RELATORIO" ? localTexto : null,
           tipoArquivo === "RELATORIO" ? conteudoTexto : null,
           numeroBimestre,
+          tipoArquivo === "RELATORIO" ? categoriaTexto : null,
         ]
       );
 

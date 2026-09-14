@@ -98,6 +98,73 @@ router.post("/", requireRole("COORDENACAO"), async (req, res) => {
   }
 });
 
+// Coordenação registra a mesma visita técnica para todos os alunos de uma
+// turma (serie_semestre) de uma vez — evita ter que abrir aluno por aluno
+// quando a turma inteira participou junto (caso comum de visita técnica).
+router.post("/turma", requireRole("COORDENACAO"), async (req, res) => {
+  try {
+    const idCoordenacao = req.auth!.id_coordenacao;
+    const { serieSemestre, local, quantidadeHoras, dataVisita, observacao, bimestre } = req.body;
+
+    if (!serieSemestre || typeof serieSemestre !== "string" || !serieSemestre.trim()) {
+      return res.status(400).json({ message: "Selecione a turma." });
+    }
+
+    if (!local || !quantidadeHoras || !dataVisita) {
+      return res.status(400).json({
+        message: "Local, quantidade de horas e data são obrigatórios.",
+      });
+    }
+
+    const horas = Number(quantidadeHoras);
+
+    if (Number.isNaN(horas) || horas <= 0) {
+      return res.status(400).json({
+        message: "Informe uma quantidade de horas válida.",
+      });
+    }
+
+    const numeroBimestre = Number(bimestre);
+
+    if (!bimestre || !Number.isInteger(numeroBimestre) || numeroBimestre < 1 || numeroBimestre > 4) {
+      return res.status(400).json({
+        message: "Informe o bimestre (1 a 4).",
+      });
+    }
+
+    const result = await db.query(
+      `
+      INSERT INTO public.visita (
+        id_aluno,
+        id_coordenacao,
+        local,
+        quantidade_horas,
+        data_visita,
+        observacao,
+        bimestre
+      )
+      SELECT id_aluno, $1, $2, $3, $4, $5, $6
+      FROM public.aluno
+      WHERE serie_semestre = $7
+      RETURNING id_aluno
+      `,
+      [idCoordenacao, local, horas, dataVisita, observacao || null, numeroBimestre, serieSemestre]
+    );
+
+    if (result.rowCount === 0) {
+      return res.status(404).json({ message: "Nenhum aluno encontrado nessa turma." });
+    }
+
+    return res.status(201).json({
+      message: `Visita registrada para ${result.rowCount} aluno(s) da turma.`,
+      totalAlunos: result.rowCount,
+    });
+  } catch (error) {
+    console.error("Erro ao registrar visita da turma:", error);
+    return res.status(500).json({ message: "Erro ao registrar visita da turma." });
+  }
+});
+
 // Coordenação exclui um registro de visita.
 router.delete("/:idVisita", requireRole("COORDENACAO"), async (req, res) => {
   try {
