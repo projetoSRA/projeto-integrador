@@ -33,6 +33,8 @@ type AlunoDetalhe = {
   totalPalestrasNoAno: number;
   eventosParticipados: number;
   totalHoras: number;
+  empresa_parceira_nome: string | null;
+  empresa_parceira_representante: string | null;
 };
 
 type Certificado = {
@@ -104,7 +106,15 @@ export default function CoordenacaoAlunoDetalhe() {
   const [horasVisita, setHorasVisita] = useState("");
   const [dataVisita, setDataVisita] = useState("");
   const [observacao, setObservacao] = useState("");
+  const [bimestreVisita, setBimestreVisita] = useState("");
   const [salvandoVisita, setSalvandoVisita] = useState(false);
+
+  const [empresaParceiraNome, setEmpresaParceiraNome] = useState("");
+  const [empresaParceiraRepresentante, setEmpresaParceiraRepresentante] = useState("");
+  const [salvandoEmpresa, setSalvandoEmpresa] = useState(false);
+
+  const [bimestrePortfolio, setBimestrePortfolio] = useState("1");
+  const [gerandoPortfolio, setGerandoPortfolio] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -135,11 +145,78 @@ export default function CoordenacaoAlunoDetalhe() {
       }
 
       setAluno(data);
+      setEmpresaParceiraNome(data.empresa_parceira_nome || "");
+      setEmpresaParceiraRepresentante(data.empresa_parceira_representante || "");
     } catch (error) {
       console.error("Erro ao carregar aluno:", error);
       setAluno(null);
     } finally {
       setCarregandoAluno(false);
+    }
+  };
+
+  const salvarEmpresaParceira = async () => {
+    if (!idAluno) return;
+
+    try {
+      setSalvandoEmpresa(true);
+
+      const response = await apiFetch(`${API_URL}/aluno/${idAluno}/empresa-parceira`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ empresaParceiraNome, empresaParceiraRepresentante }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Erro ao salvar empresa parceira.");
+      }
+
+      setAluno((prev) =>
+        prev
+          ? {
+              ...prev,
+              empresa_parceira_nome: data.aluno.empresa_parceira_nome,
+              empresa_parceira_representante: data.aluno.empresa_parceira_representante,
+            }
+          : prev
+      );
+    } catch (error: any) {
+      alert(error.message || "Erro ao salvar empresa parceira.");
+    } finally {
+      setSalvandoEmpresa(false);
+    }
+  };
+
+  const baixarPortfolio = async () => {
+    if (!idAluno) return;
+
+    try {
+      setGerandoPortfolio(true);
+
+      const response = await apiFetch(
+        `${API_URL}/portfolio/${idAluno}/bimestre/${bimestrePortfolio}`
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.message || "Erro ao gerar o portfólio.");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `portfolio-${aluno?.rm || aluno?.ra || idAluno}-${bimestrePortfolio}bimestre.docx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      alert(error.message || "Erro ao gerar o portfólio.");
+    } finally {
+      setGerandoPortfolio(false);
     }
   };
 
@@ -194,6 +271,7 @@ export default function CoordenacaoAlunoDetalhe() {
     setHorasVisita("");
     setDataVisita("");
     setObservacao("");
+    setBimestreVisita("");
     setModalVisitaAberto(true);
   };
 
@@ -204,6 +282,11 @@ export default function CoordenacaoAlunoDetalhe() {
     const horas = Number(horasVisita);
     if (Number.isNaN(horas) || horas <= 0) {
       alert("Informe uma quantidade de horas válida.");
+      return;
+    }
+
+    if (!bimestreVisita) {
+      alert("Selecione o bimestre.");
       return;
     }
 
@@ -219,6 +302,7 @@ export default function CoordenacaoAlunoDetalhe() {
           quantidadeHoras: horas,
           dataVisita,
           observacao: observacao || null,
+          bimestre: bimestreVisita,
         }),
       });
 
@@ -310,6 +394,81 @@ export default function CoordenacaoAlunoDetalhe() {
               <p className="text-2xl font-semibold text-white">{Number(aluno.totalHoras || 0)}h</p>
             </div>
           </div>
+        )}
+
+        {aluno && (
+          <Card className="rounded-2xl border-0 shadow mb-6" style={panelStyle}>
+            <CardHeader>
+              <CardTitle className="text-white flex items-center gap-2">
+                <Building2 className="size-5" />
+                Empresa Parceira e Portfólio do Aluno
+              </CardTitle>
+            </CardHeader>
+
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-white/70 text-sm mb-2">Nome da empresa parceira</label>
+                  <input
+                    type="text"
+                    value={empresaParceiraNome}
+                    onChange={(e) => setEmpresaParceiraNome(e.target.value)}
+                    maxLength={255}
+                    className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+                    placeholder="Ex: Tech Solutions Ltda."
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-white/70 text-sm mb-2">Representante da empresa</label>
+                  <input
+                    type="text"
+                    value={empresaParceiraRepresentante}
+                    onChange={(e) => setEmpresaParceiraRepresentante(e.target.value)}
+                    maxLength={255}
+                    className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+                    placeholder="Ex: Maria Fernanda Costa"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end">
+                <Button
+                  type="button"
+                  onClick={salvarEmpresaParceira}
+                  disabled={salvandoEmpresa}
+                  className="rounded-xl bg-white text-[#2f3147] hover:bg-white/90"
+                >
+                  {salvandoEmpresa ? "Salvando..." : "Salvar empresa parceira"}
+                </Button>
+              </div>
+
+              <div className="border-t border-white/10 pt-5 flex flex-col sm:flex-row sm:items-end gap-3">
+                <div className="flex-1">
+                  <label className="block text-white/70 text-sm mb-2">Bimestre do portfólio</label>
+                  <select
+                    value={bimestrePortfolio}
+                    onChange={(e) => setBimestrePortfolio(e.target.value)}
+                    className="w-full sm:w-48 rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+                  >
+                    <option value="1" className="text-black">1º Bimestre</option>
+                    <option value="2" className="text-black">2º Bimestre</option>
+                    <option value="3" className="text-black">3º Bimestre</option>
+                    <option value="4" className="text-black">4º Bimestre</option>
+                  </select>
+                </div>
+
+                <Button
+                  type="button"
+                  onClick={baixarPortfolio}
+                  disabled={gerandoPortfolio}
+                  className="rounded-xl bg-white text-[#2f3147] hover:bg-white/90"
+                >
+                  {gerandoPortfolio ? "Gerando..." : "Baixar Portfólio (.docx)"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
         )}
 
         <Card className="rounded-2xl border-0 shadow" style={panelStyle}>
@@ -563,7 +722,7 @@ export default function CoordenacaoAlunoDetalhe() {
 
     {modalVisitaAberto && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
-          <div className="w-full max-w-lg rounded-2xl p-6 shadow-xl" style={panelStyle}>
+          <div className="w-full max-w-lg max-h-[90vh] rounded-2xl p-6 shadow-xl overflow-y-auto" style={panelStyle}>
             <div className="flex items-center justify-between mb-5">
               <h2 className="text-xl font-semibold text-white flex items-center gap-2">
                 <CalendarDays className="size-5" />
@@ -614,6 +773,24 @@ export default function CoordenacaoAlunoDetalhe() {
                   required
                   className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
                 />
+              </div>
+
+              <div>
+                <label className="block text-white mb-2">Bimestre</label>
+                <select
+                  value={bimestreVisita}
+                  onChange={(e) => setBimestreVisita(e.target.value)}
+                  required
+                  className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+                >
+                  <option value="" className="text-black">
+                    Selecione...
+                  </option>
+                  <option value="1" className="text-black">1º Bimestre</option>
+                  <option value="2" className="text-black">2º Bimestre</option>
+                  <option value="3" className="text-black">3º Bimestre</option>
+                  <option value="4" className="text-black">4º Bimestre</option>
+                </select>
               </div>
 
               <div>

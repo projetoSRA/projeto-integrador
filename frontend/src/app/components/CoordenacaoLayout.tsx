@@ -5,6 +5,7 @@ import { User } from "../utils/auth";
 import { clearSession } from "../utils/api";
 import { panelStyle } from "../../styles/uiStyles";
 import { FileCheck2, LogOut, LucideIcon, Users } from "lucide-react";
+import ChatbotCoordenacao from "./ChatbotCoordenacao";
 
 type ActivePage = "dashboard" | "alunos";
 
@@ -152,6 +153,8 @@ export default function CoordenacaoLayout({
           </div>
         </main>
       </div>
+
+      <ChatbotCoordenacao />
     </div>
   );
 }

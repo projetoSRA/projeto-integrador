@@ -6,7 +6,7 @@ import CoordenacaoLayout from "../components/CoordenacaoLayout";
 import { User } from "../utils/auth";
 import { apiFetch } from "../utils/api";
 import { panelStyle, cardStyle } from "../../styles/uiStyles";
-import { Clock, Search, Upload, Users } from "lucide-react";
+import { Building2, CalendarDays, Clock, Search, Upload, Users, X } from "lucide-react";
 
 type ResultadoImportacao = {
   message: string;
@@ -72,6 +72,21 @@ export default function CoordenacaoAlunos() {
   const [importando, setImportando] = useState(false);
   const [resultadoImportacao, setResultadoImportacao] = useState<ResultadoImportacao | null>(null);
   const [erroImportacao, setErroImportacao] = useState<string | null>(null);
+
+  const [modalVisitaTurmaAberto, setModalVisitaTurmaAberto] = useState(false);
+  const [turmaVisita, setTurmaVisita] = useState("");
+  const [localVisitaTurma, setLocalVisitaTurma] = useState("");
+  const [horasVisitaTurma, setHorasVisitaTurma] = useState("");
+  const [dataVisitaTurma, setDataVisitaTurma] = useState("");
+  const [bimestreVisitaTurma, setBimestreVisitaTurma] = useState("");
+  const [observacaoVisitaTurma, setObservacaoVisitaTurma] = useState("");
+  const [salvandoVisitaTurma, setSalvandoVisitaTurma] = useState(false);
+
+  const [modalEmpresaTurmaAberto, setModalEmpresaTurmaAberto] = useState(false);
+  const [turmaEmpresa, setTurmaEmpresa] = useState("");
+  const [nomeEmpresaTurma, setNomeEmpresaTurma] = useState("");
+  const [representanteEmpresaTurma, setRepresentanteEmpresaTurma] = useState("");
+  const [salvandoEmpresaTurma, setSalvandoEmpresaTurma] = useState(false);
 
   useEffect(() => {
     const userData = localStorage.getItem("user");
@@ -194,9 +209,114 @@ export default function CoordenacaoAlunos() {
     }
   };
 
+  const abrirModalVisitaTurma = () => {
+    setTurmaVisita(turmas[0] || "");
+    setLocalVisitaTurma("");
+    setHorasVisitaTurma("");
+    setDataVisitaTurma("");
+    setBimestreVisitaTurma("");
+    setObservacaoVisitaTurma("");
+    setModalVisitaTurmaAberto(true);
+  };
+
+  const registrarVisitaTurma = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    const horas = Number(horasVisitaTurma);
+    if (Number.isNaN(horas) || horas <= 0) {
+      alert("Informe uma quantidade de horas válida.");
+      return;
+    }
+
+    if (!turmaVisita) {
+      alert("Selecione a turma.");
+      return;
+    }
+
+    if (!bimestreVisitaTurma) {
+      alert("Selecione o bimestre.");
+      return;
+    }
+
+    try {
+      setSalvandoVisitaTurma(true);
+
+      const response = await apiFetch(`${API_URL}/visita/turma`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serieSemestre: turmaVisita,
+          local: localVisitaTurma,
+          quantidadeHoras: horas,
+          dataVisita: dataVisitaTurma,
+          observacao: observacaoVisitaTurma || null,
+          bimestre: bimestreVisitaTurma,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Erro ao registrar visita da turma.");
+      }
+
+      alert(data.message);
+      setModalVisitaTurmaAberto(false);
+      setRecarregarContador((c) => c + 1);
+    } catch (error: any) {
+      alert(error.message || "Erro ao registrar visita da turma.");
+    } finally {
+      setSalvandoVisitaTurma(false);
+    }
+  };
+
+  const abrirModalEmpresaTurma = () => {
+    setTurmaEmpresa(turmas[0] || "");
+    setNomeEmpresaTurma("");
+    setRepresentanteEmpresaTurma("");
+    setModalEmpresaTurmaAberto(true);
+  };
+
+  const salvarEmpresaTurma = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!turmaEmpresa) {
+      alert("Selecione a turma.");
+      return;
+    }
+
+    try {
+      setSalvandoEmpresaTurma(true);
+
+      const response = await apiFetch(`${API_URL}/aluno/turma/empresa-parceira`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          serieSemestre: turmaEmpresa,
+          empresaParceiraNome: nomeEmpresaTurma,
+          empresaParceiraRepresentante: representanteEmpresaTurma,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.message || "Erro ao atualizar empresa parceira da turma.");
+      }
+
+      alert(data.message);
+      setModalEmpresaTurmaAberto(false);
+    } catch (error: any) {
+      alert(error.message || "Erro ao atualizar empresa parceira da turma.");
+    } finally {
+      setSalvandoEmpresaTurma(false);
+    }
+  };
+
   if (!user) return null;
 
   return (
+    <>
     <CoordenacaoLayout
       user={user}
       activePage="alunos"
@@ -219,6 +339,24 @@ export default function CoordenacaoAlunos() {
           >
             <Upload className="size-4" />
             {importando ? "Importando..." : "Importar planilha"}
+          </Button>
+
+          <Button
+            onClick={abrirModalVisitaTurma}
+            disabled={turmas.length === 0}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl text-white bg-white/10 hover:bg-white/15 border border-white/10"
+          >
+            <CalendarDays className="size-4" />
+            Visita p/ turma
+          </Button>
+
+          <Button
+            onClick={abrirModalEmpresaTurma}
+            disabled={turmas.length === 0}
+            className="flex-1 sm:flex-none flex items-center justify-center gap-2 rounded-xl text-white bg-white/10 hover:bg-white/15 border border-white/10"
+          >
+            <Building2 className="size-4" />
+            Empresa p/ turma
           </Button>
         </>
       }
@@ -394,5 +532,218 @@ export default function CoordenacaoAlunos() {
           </CardContent>
         </Card>
     </CoordenacaoLayout>
+
+    {modalVisitaTurmaAberto && (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div className="w-full max-w-lg max-h-[90vh] rounded-2xl p-6 shadow-xl overflow-y-auto" style={panelStyle}>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+              <CalendarDays className="size-5" />
+              Registrar visita para a turma
+            </h2>
+
+            <button
+              onClick={() => setModalVisitaTurmaAberto(false)}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition"
+              type="button"
+            >
+              <X className="size-5 text-white" />
+            </button>
+          </div>
+
+          <p className="text-white/60 text-sm mb-4">
+            Cria a mesma visita técnica para todos os alunos da turma escolhida de uma vez.
+          </p>
+
+          <form onSubmit={registrarVisitaTurma} className="space-y-4">
+            <div>
+              <label className="block text-white mb-2">Turma</label>
+              <select
+                value={turmaVisita}
+                onChange={(e) => setTurmaVisita(e.target.value)}
+                required
+                className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none [&>option]:bg-[#2f3147]"
+              >
+                {turmas.map((turma) => (
+                  <option key={turma} value={turma}>
+                    {turma}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-white mb-2">Local</label>
+              <input
+                type="text"
+                value={localVisitaTurma}
+                onChange={(e) => setLocalVisitaTurma(e.target.value)}
+                required
+                className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+                placeholder="Ex: Empresa / cidade visitada"
+              />
+            </div>
+
+            <div>
+              <label className="block text-white mb-2">Quantidade de horas</label>
+              <input
+                type="number"
+                min={0.5}
+                step={0.5}
+                value={horasVisitaTurma}
+                onChange={(e) => setHorasVisitaTurma(e.target.value)}
+                required
+                className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-white mb-2">Data</label>
+              <input
+                type="date"
+                value={dataVisitaTurma}
+                onChange={(e) => setDataVisitaTurma(e.target.value)}
+                required
+                className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="block text-white mb-2">Bimestre</label>
+              <select
+                value={bimestreVisitaTurma}
+                onChange={(e) => setBimestreVisitaTurma(e.target.value)}
+                required
+                className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none [&>option]:bg-[#2f3147]"
+              >
+                <option value="" className="text-black">Selecione...</option>
+                <option value="1" className="text-black">1º Bimestre</option>
+                <option value="2" className="text-black">2º Bimestre</option>
+                <option value="3" className="text-black">3º Bimestre</option>
+                <option value="4" className="text-black">4º Bimestre</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-white mb-2">Observação (opcional)</label>
+              <textarea
+                value={observacaoVisitaTurma}
+                onChange={(e) => setObservacaoVisitaTurma(e.target.value)}
+                rows={3}
+                className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3">
+              <Button
+                type="button"
+                onClick={() => setModalVisitaTurmaAberto(false)}
+                variant="outline"
+                className="rounded-xl bg-transparent text-white hover:bg-white/10"
+                style={{ borderColor: "#8c8da9", color: "#ffffff" }}
+              >
+                Cancelar
+              </Button>
+
+              <Button
+                type="submit"
+                disabled={salvandoVisitaTurma}
+                className="rounded-xl bg-white text-[#2f3147] hover:bg-white/90"
+              >
+                {salvandoVisitaTurma ? "Salvando..." : "Registrar para a turma"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+
+    {modalEmpresaTurmaAberto && (
+      <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+        <div className="w-full max-w-lg max-h-[90vh] rounded-2xl p-6 shadow-xl overflow-y-auto" style={panelStyle}>
+          <div className="flex items-center justify-between mb-5">
+            <h2 className="text-xl font-semibold text-white flex items-center gap-2">
+              <Building2 className="size-5" />
+              Empresa parceira da turma
+            </h2>
+
+            <button
+              onClick={() => setModalEmpresaTurmaAberto(false)}
+              className="p-2 rounded-xl bg-white/10 hover:bg-white/20 transition"
+              type="button"
+            >
+              <X className="size-5 text-white" />
+            </button>
+          </div>
+
+          <p className="text-white/60 text-sm mb-4">
+            Define a mesma empresa parceira e representante para todos os alunos da turma escolhida.
+          </p>
+
+          <form onSubmit={salvarEmpresaTurma} className="space-y-4">
+            <div>
+              <label className="block text-white mb-2">Turma</label>
+              <select
+                value={turmaEmpresa}
+                onChange={(e) => setTurmaEmpresa(e.target.value)}
+                required
+                className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none [&>option]:bg-[#2f3147]"
+              >
+                {turmas.map((turma) => (
+                  <option key={turma} value={turma}>
+                    {turma}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-white mb-2">Nome da empresa parceira</label>
+              <input
+                type="text"
+                value={nomeEmpresaTurma}
+                onChange={(e) => setNomeEmpresaTurma(e.target.value)}
+                maxLength={255}
+                className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+                placeholder="Ex: Tech Solutions Ltda."
+              />
+            </div>
+
+            <div>
+              <label className="block text-white mb-2">Representante da empresa</label>
+              <input
+                type="text"
+                value={representanteEmpresaTurma}
+                onChange={(e) => setRepresentanteEmpresaTurma(e.target.value)}
+                maxLength={255}
+                className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+                placeholder="Ex: Maria Fernanda Costa"
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-3">
+              <Button
+                type="button"
+                onClick={() => setModalEmpresaTurmaAberto(false)}
+                variant="outline"
+                className="rounded-xl bg-transparent text-white hover:bg-white/10"
+                style={{ borderColor: "#8c8da9", color: "#ffffff" }}
+              >
+                Cancelar
+              </Button>
+
+              <Button
+                type="submit"
+                disabled={salvandoEmpresaTurma}
+                className="rounded-xl bg-white text-[#2f3147] hover:bg-white/90"
+              >
+                {salvandoEmpresaTurma ? "Salvando..." : "Aplicar para a turma"}
+              </Button>
+            </div>
+          </form>
+        </div>
+      </div>
+    )}
+    </>
   );
 }

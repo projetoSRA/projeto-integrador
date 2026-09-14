@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Button } from "../components/ui/button";
 import { User } from "../utils/auth";
 import { apiFetch } from "../utils/api";
 import AlunoLayout, { glassCardStyle } from "../components/AlunoLayout";
@@ -14,6 +15,7 @@ import {
   Clock3,
   FileBadge2,
   Mic2,
+  Download,
 } from "lucide-react";
 
 type NewsItem = {
@@ -30,6 +32,8 @@ export default function DashboardAluno() {
   const [user, setUser] = useState<User | null>(null);
 
   const [horas, setHoras] = useState(0);
+  const [bimestrePortfolio, setBimestrePortfolio] = useState("1");
+  const [gerandoPortfolio, setGerandoPortfolio] = useState(false);
   const noticias: NewsItem[] = [
     {
       id: 1,
@@ -88,10 +92,81 @@ export default function DashboardAluno() {
     .catch(() => setHoras(0));
   }, [navigate]);
 
+  const baixarPortfolio = async () => {
+    if (!user) return;
+
+    try {
+      setGerandoPortfolio(true);
+
+      const response = await apiFetch(
+        `${API_URL}/portfolio/${user.id}/bimestre/${bimestrePortfolio}`
+      );
+
+      if (!response.ok) {
+        const data = await response.json().catch(() => null);
+        throw new Error(data?.message || "Erro ao gerar o portfólio.");
+      }
+
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+      link.href = url;
+      link.download = `portfolio-${user.identifier}-${bimestrePortfolio}bimestre.docx`;
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (error: any) {
+      alert(error.message || "Erro ao gerar o portfólio.");
+    } finally {
+      setGerandoPortfolio(false);
+    }
+  };
+
   if (!user) return null;
 
   return (
     <AlunoLayout user={user} activePage="inicio" horas={horas}>
+      <Card
+        className="rounded-2xl border-0 shadow mb-6"
+        style={panelStyle}
+      >
+        <CardHeader>
+          <CardTitle className="text-white flex items-center gap-2">
+            <FileBadge2 className="size-5" />
+            Portfólio do Aluno
+          </CardTitle>
+        </CardHeader>
+
+        <CardContent>
+          <div className="flex flex-col sm:flex-row sm:items-end gap-3">
+            <div className="flex-1">
+              <label className="block text-white/70 text-sm mb-2">Bimestre</label>
+              <select
+                value={bimestrePortfolio}
+                onChange={(e) => setBimestrePortfolio(e.target.value)}
+                className="w-full sm:w-48 rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none"
+              >
+                <option value="1" className="text-black">1º Bimestre</option>
+                <option value="2" className="text-black">2º Bimestre</option>
+                <option value="3" className="text-black">3º Bimestre</option>
+                <option value="4" className="text-black">4º Bimestre</option>
+              </select>
+            </div>
+
+            <Button
+              type="button"
+              onClick={baixarPortfolio}
+              disabled={gerandoPortfolio}
+              className="flex items-center justify-center gap-2 rounded-xl bg-white text-[#2f3147] hover:bg-white/90"
+            >
+              <Download className="size-4" />
+              {gerandoPortfolio ? "Gerando..." : "Baixar Portfólio (.docx)"}
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
       <Card
         className="rounded-2xl border-0 shadow mb-6"
        style={panelStyle}
