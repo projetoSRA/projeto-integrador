@@ -58,9 +58,28 @@ export default function CoordenacaoLayout({
         }}
       />
 
-      <div className="relative flex flex-col lg:flex-row h-full gap-4 lg:gap-10">
+      <div className="relative grid grid-cols-1 lg:grid-cols-[20rem_1fr] lg:grid-rows-[auto_1fr] h-full gap-4 lg:gap-x-10 lg:gap-y-8">
+        <header
+          className="lg:col-start-2 lg:row-start-1 flex flex-col sm:flex-row sm:items-center gap-4 p-4 sm:p-6 rounded-2xl"
+          style={panelStyle}
+        >
+          <Icon className="size-9 text-blue-400 shrink-0" />
+          <div className="flex-1">
+            <h1 className="text-2xl sm:text-3xl font-semibold text-white">
+              {title}
+            </h1>
+            {subtitle && (
+              <p className="text-white/70 text-sm sm:text-base">{subtitle}</p>
+            )}
+          </div>
+
+          {headerActions && (
+            <div className="flex gap-2 w-full sm:w-auto">{headerActions}</div>
+          )}
+        </header>
+
         <aside
-          className="order-2 lg:order-1 w-full lg:w-80 lg:shrink-0 lg:min-h-full p-4 sm:p-6 flex flex-col justify-between rounded-2xl"
+          className="lg:col-start-1 lg:row-start-1 lg:row-span-2 w-full lg:min-h-full p-4 sm:p-6 flex flex-col justify-between rounded-2xl"
           style={panelStyle}
         >
           <div>
@@ -119,7 +138,7 @@ export default function CoordenacaoLayout({
           </Button>
         </aside>
 
-        <main className="order-1 lg:order-2 flex-1 rounded-2xl p-3 sm:p-4 md:p-6 lg:overflow-hidden">
+        <main className="lg:col-start-2 lg:row-start-2 rounded-2xl lg:overflow-hidden">
           <div
             className="
               max-w-7xl mx-auto lg:h-full lg:overflow-y-auto lg:pr-2
@@ -128,27 +147,6 @@ export default function CoordenacaoLayout({
               [&::-webkit-scrollbar]:hidden
             "
           >
-            <header
-              className="flex flex-col sm:flex-row sm:items-center gap-4 mb-8 p-4 sm:p-6 rounded-2xl"
-              style={panelStyle}
-            >
-              <Icon className="size-9 text-blue-400 shrink-0" />
-              <div className="flex-1">
-                <h1 className="text-2xl sm:text-3xl font-semibold text-white">
-                  {title}
-                </h1>
-                {subtitle && (
-                  <p className="text-white/70 text-sm sm:text-base">
-                    {subtitle}
-                  </p>
-                )}
-              </div>
-
-              {headerActions && (
-                <div className="flex gap-2 w-full sm:w-auto">{headerActions}</div>
-              )}
-            </header>
-
             {children}
           </div>
         </main>
