@@ -174,35 +174,41 @@ export default function HorasAMS() {
                     Faltam {horasRestantes}h para completar a carga total.
                   </p>
 
-                  <div className="grid grid-cols-3 gap-2 sm:gap-3 mt-6">
-                    <div className="rounded-xl bg-white/10 p-4 text-center">
-                      <p className="text-white/70 text-sm">Eventos</p>
-                      <p className="text-white text-xl font-semibold">
-                        {horasEventos}h
-                      </p>
-                      <p className="text-white/50 text-xs mt-1">
-                        {totalEventos} registros
-                      </p>
+                  <div className="grid grid-cols-1 gap-2 sm:grid-cols-3 sm:gap-3 mt-5 sm:mt-6">
+                    <div className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3 sm:block sm:p-4 sm:text-center">
+                      <p className="text-white/75 text-sm font-medium sm:font-normal">Eventos</p>
+                      <div className="text-right sm:text-center">
+                        <p className="text-white text-xl font-semibold leading-none">
+                          {horasEventos}h
+                        </p>
+                        <p className="text-white/50 text-xs mt-1">
+                          {totalEventos} registros
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="rounded-xl bg-white/10 p-4 text-center">
-                      <p className="text-white/70 text-sm">Certificados</p>
-                      <p className="text-white text-xl font-semibold">
-                        {horasCertificados}h
-                      </p>
-                      <p className="text-white/50 text-xs mt-1">
-                        {totalCertificados} arquivos
-                      </p>
+                    <div className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3 sm:block sm:p-4 sm:text-center">
+                      <p className="text-white/75 text-sm font-medium sm:font-normal">Certificados</p>
+                      <div className="text-right sm:text-center">
+                        <p className="text-white text-xl font-semibold leading-none">
+                          {horasCertificados}h
+                        </p>
+                        <p className="text-white/50 text-xs mt-1">
+                          {totalCertificados} arquivos
+                        </p>
+                      </div>
                     </div>
 
-                    <div className="rounded-xl bg-white/10 p-4 text-center">
-                      <p className="text-white/70 text-sm">Relatórios</p>
-                      <p className="text-white text-xl font-semibold">
-                        {horasRelatorios}h
-                      </p>
-                      <p className="text-white/50 text-xs mt-1">
-                        {totalRelatorios} arquivos
-                      </p>
+                    <div className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3 sm:block sm:p-4 sm:text-center">
+                      <p className="text-white/75 text-sm font-medium sm:font-normal">Relatórios</p>
+                      <div className="text-right sm:text-center">
+                        <p className="text-white text-xl font-semibold leading-none">
+                          {horasRelatorios}h
+                        </p>
+                        <p className="text-white/50 text-xs mt-1">
+                          {totalRelatorios} arquivos
+                        </p>
+                      </div>
                     </div>
                   </div>
                 </div>

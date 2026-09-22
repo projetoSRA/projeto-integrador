@@ -75,7 +75,6 @@ export default function Certificados() {
   const [horas, setHoras] = useState("");
   const [data, setData] = useState("");
   const [bimestre, setBimestre] = useState("");
-  const [categoria, setCategoria] = useState("");
   const [local, setLocal] = useState("");
   const [conteudo, setConteudo] = useState("");
   const [arquivo, setArquivo] = useState<File | null>(null);
@@ -157,7 +156,6 @@ export default function Certificados() {
     setHoras("");
     setData("");
     setBimestre("");
-    setCategoria("");
     setLocal("");
     setConteudo("");
     setArquivo(null);
@@ -221,11 +219,6 @@ export default function Certificados() {
     }
 
     if (tipoSelecionado === "relatorio") {
-      if (!categoria) {
-        alert("Selecione a categoria do relatório (Palestra, Curso ou Visita).");
-        return false;
-      }
-
       if (!local.trim() || !conteudo.trim()) {
         alert(
           "Para relatórios, informe o local da atividade e o conteúdo do relato — é o texto usado para montar o Portfólio do Aluno automaticamente."
@@ -256,7 +249,6 @@ export default function Certificados() {
       formData.append("arquivo", arquivo);
 
       if (tipoSelecionado === "relatorio") {
-        formData.append("categoria", categoria);
         formData.append("local", local);
         formData.append("conteudo", conteudo);
       }
@@ -339,15 +331,15 @@ export default function Certificados() {
     }
 
     return (
-      <div className="grid grid-cols-1 xl:grid-cols-2 gap-5">
+      <div className="grid min-w-0 grid-cols-1 xl:grid-cols-2 gap-4 sm:gap-5">
         {lista.map((item) => (
           <div
             key={item.id}
-            className="rounded-2xl bg-white/10 p-5 border border-white/10"
+            className="min-w-0 overflow-hidden rounded-2xl bg-white/10 p-4 sm:p-5 border border-white/10"
           >
-            <div className="flex items-start justify-between gap-4">
-              <div>
-                <h3 className="text-white font-semibold text-lg mb-2">
+            <div className="flex min-w-0 items-start justify-between gap-3 sm:gap-4">
+              <div className="min-w-0 flex-1">
+                <h3 className="[overflow-wrap:anywhere] text-white font-semibold text-base sm:text-lg leading-snug mb-2">
                   {item.titulo}
                 </h3>
 
@@ -367,9 +359,11 @@ export default function Certificados() {
                   </span>
                 </p>
 
-                <p className="text-white/70 text-sm mb-1">
+                <p className="min-w-0 text-white/70 text-sm mb-1">
                   Arquivo:{" "}
-                  <span className="text-white">{item.arquivoNome}</span>
+                  <span className="[overflow-wrap:anywhere] text-white">
+                    {item.arquivoNome}
+                  </span>
                 </p>
 
                 <p className="text-white/70 text-sm">
@@ -380,7 +374,7 @@ export default function Certificados() {
                 </p>
               </div>
 
-              <div className="flex gap-2">
+              <div className="flex shrink-0 gap-2">
                 <a
                   href={item.arquivoUrl}
                   target="_blank"
@@ -425,10 +419,10 @@ export default function Certificados() {
 
         <CardContent className="space-y-6">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-            <div className="flex gap-2 bg-white/10 p-1 rounded-xl">
+            <div className="flex w-full gap-1 bg-white/10 p-1 rounded-xl sm:w-auto sm:gap-2">
               <button
                 onClick={() => setFiltro("certificado")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition sm:flex-none sm:px-4 ${
                   filtro === "certificado"
                     ? "bg-white text-[#2f3147]"
                     : "text-white/70 hover:text-white"
@@ -439,7 +433,7 @@ export default function Certificados() {
 
               <button
                 onClick={() => setFiltro("relatorio")}
-                className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition sm:flex-none sm:px-4 ${
                   filtro === "relatorio"
                     ? "bg-white text-[#2f3147]"
                     : "text-white/70 hover:text-white"
@@ -469,7 +463,7 @@ export default function Certificados() {
       {modalAberto && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
           <div
-            className="w-full max-w-lg max-h-[90vh] rounded-2xl p-6 shadow-xl overflow-y-auto"
+            className="w-full max-w-lg max-h-[90vh] overflow-y-auto rounded-2xl p-6 shadow-xl"
             style={panelStyle}
           >
             <div className="flex items-center justify-between mb-5">
@@ -562,28 +556,6 @@ export default function Certificados() {
 
               {tipoSelecionado === "relatorio" && (
                 <>
-                  <div>
-                    <label className="block text-white mb-2">
-                      Categoria do relatório
-                    </label>
-
-                    <select
-                      value={categoria}
-                      onChange={(e) => setCategoria(e.target.value)}
-                      required
-                      className="w-full rounded-xl bg-white/10 border border-white/10 p-3 text-white outline-none [&>option]:bg-[#2f3147]"
-                    >
-                      <option value="" className="text-black">Selecione...</option>
-                      <option value="PALESTRA" className="text-black">Palestra</option>
-                      <option value="CURSO" className="text-black">Curso</option>
-                      <option value="VISITA" className="text-black">Visita</option>
-                    </select>
-
-                    <p className="text-white/60 text-sm mt-2">
-                      Define em qual seção do Portfólio do Aluno esse relatório vai aparecer.
-                    </p>
-                  </div>
-
                   <div>
                     <label className="block text-white mb-2">
                       Local da atividade
