@@ -2,6 +2,20 @@
 @import './tailwind.css';
 @import './theme.css';
 
+html,
+body,
+#root {
+  min-height: 100%;
+  margin: 0;
+  background: #020305;
+}
+
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  overflow-x: hidden;
+}
+
 /* SCROLLBAR MODERNA */
 .custom-scroll::-webkit-scrollbar {
   width: 6px;

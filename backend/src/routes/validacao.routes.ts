@@ -74,6 +74,7 @@ router.get(
         v.data_validacao,
         v.criado_em,
         c.titulo,
+        c.tipo_arquivo,
         c.id_aluno,
         a.nome AS nome_aluno
       FROM public.validacao v

@@ -16,6 +16,9 @@ import {
   Clock,
   Eye,
   History,
+  FileCheck2,
+  FileText,
+  Users,
   X,
   XCircle,
 } from "lucide-react";
@@ -50,6 +53,7 @@ type Historico = {
   titulo: string;
   id_aluno: number;
   nome_aluno: string;
+  tipo_arquivo: "CERTIFICADO" | "RELATORIO";
 };
 
 function formatarData(dataISO: string) {
@@ -89,6 +93,7 @@ export default function DashboardCoordenacao() {
   const [historico, setHistorico] = useState<Historico[]>([]);
   const [loadingHistorico, setLoadingHistorico] = useState(false);
   const [historicoCarregado, setHistoricoCarregado] = useState(false);
+  const [totalAlunos, setTotalAlunos] = useState(0);
 
   const [rejeicaoAlvo, setRejeicaoAlvo] = useState<Pendente | null>(null);
   const [motivoRejeicao, setMotivoRejeicao] = useState("");
@@ -163,9 +168,21 @@ export default function DashboardCoordenacao() {
     }
   };
 
+  const carregarTotalAlunos = async () => {
+    try {
+      const response = await apiFetch(`${API_URL}/aluno`);
+      const data = await response.json();
+      setTotalAlunos(response.ok && Array.isArray(data) ? data.length : 0);
+    } catch {
+      setTotalAlunos(0);
+    }
+  };
+
   useEffect(() => {
     if (!user) return;
     carregarPendentes();
+    carregarHistorico();
+    carregarTotalAlunos();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -216,6 +233,7 @@ export default function DashboardCoordenacao() {
         prev.filter((p) => p.id_certificado !== item.id_certificado)
       );
       setHistoricoCarregado(false);
+      carregarHistorico();
     } catch (error: any) {
       alert(error.message || "Erro ao aprovar arquivo.");
     } finally {
@@ -255,6 +273,7 @@ export default function DashboardCoordenacao() {
         prev.filter((p) => p.id_certificado !== rejeicaoAlvo.id_certificado)
       );
       setHistoricoCarregado(false);
+      carregarHistorico();
       setRejeicaoAlvo(null);
     } catch (error: any) {
       alert(error.message || "Erro ao reprovar arquivo.");
@@ -265,6 +284,17 @@ export default function DashboardCoordenacao() {
 
   if (!user) return null;
 
+  const certificadosAprovados = historico.filter(
+    (item) =>
+      item.status_validacao.toUpperCase() === "APROVADO" &&
+      item.tipo_arquivo === "CERTIFICADO"
+  ).length;
+  const relatoriosAprovados = historico.filter(
+    (item) =>
+      item.status_validacao.toUpperCase() === "APROVADO" &&
+      item.tipo_arquivo === "RELATORIO"
+  ).length;
+
   return (
     <>
     <CoordenacaoLayout
@@ -274,18 +304,37 @@ export default function DashboardCoordenacao() {
       subtitle={`Bem-vindo(a), ${user.name}`}
       pendentesCount={loadingPendentes ? undefined : pendentes.length}
     >
-      <Card className="rounded-2xl border-0 shadow" style={panelStyle}>
-          <CardHeader>
-            <CardTitle className="text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <section className="mb-4 grid grid-cols-2 gap-2 sm:grid-cols-4 sm:gap-3" aria-label="Resumo da coordenação">
+        {[
+          { label: "Pendências", value: pendentes.length, icon: Clock, color: "text-amber-300" },
+          { label: "Alunos", value: totalAlunos, icon: Users, color: "text-blue-300" },
+          { label: "Certificados", value: certificadosAprovados, icon: FileCheck2, color: "text-emerald-300" },
+          { label: "Relatórios", value: relatoriosAprovados, icon: FileText, color: "text-violet-300" },
+        ].map(({ label, value, icon: SummaryIcon, color }) => (
+          <div key={label} className="flex items-center gap-3 rounded-xl border border-white/10 bg-white/[0.06] p-3 sm:p-4">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-lg bg-white/10">
+              <SummaryIcon className={`size-5 ${color}`} />
+            </div>
+            <div className="min-w-0">
+              <strong className="block text-xl leading-none text-white">{value}</strong>
+              <span className="mt-1 block truncate text-xs text-white/60">{label}</span>
+            </div>
+          </div>
+        ))}
+      </section>
+
+      <Card className="gap-2 rounded-2xl border-0 shadow" style={panelStyle}>
+          <CardHeader className="px-4 pt-4 pb-2 sm:px-5 sm:pt-5">
+            <CardTitle className="text-base sm:text-lg text-white flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               <span className="flex items-center gap-2">
                 <Clock className="size-5 shrink-0" />
                 Validação de Certificados e Relatórios
               </span>
 
-              <div className="flex gap-2 bg-white/10 p-1 rounded-xl self-start sm:self-auto">
+              <div className="flex w-full gap-1 bg-white/10 p-1 rounded-xl sm:w-auto sm:gap-2">
                 <button
                   onClick={() => setAba("pendentes")}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition ${
+                  className={`flex-1 px-3 py-2 rounded-lg text-sm font-medium transition sm:flex-none sm:px-4 ${
                     aba === "pendentes"
                       ? "bg-white text-[#2f3147]"
                       : "text-white/70 hover:text-white"
@@ -297,7 +346,7 @@ export default function DashboardCoordenacao() {
 
                 <button
                   onClick={() => setAba("historico")}
-                  className={`px-4 py-2 rounded-lg text-sm font-medium transition flex items-center gap-1 ${
+                  className={`flex flex-1 items-center justify-center gap-1 px-3 py-2 rounded-lg text-sm font-medium transition sm:flex-none sm:px-4 ${
                     aba === "historico"
                       ? "bg-white text-[#2f3147]"
                       : "text-white/70 hover:text-white"
@@ -311,22 +360,22 @@ export default function DashboardCoordenacao() {
             </CardTitle>
           </CardHeader>
 
-          <CardContent className="space-y-4">
+          <CardContent className="space-y-4 px-3 pt-1 pb-3 sm:px-5 sm:pb-5">
             {aba === "pendentes" && (
               <>
                 {loadingPendentes && (
-                  <div className="rounded-2xl bg-white/10 p-8 text-center">
+                  <div className="rounded-xl bg-white/10 p-5 text-center sm:p-6">
                     <p className="text-white/70">Carregando pendências...</p>
                   </div>
                 )}
 
                 {!loadingPendentes && pendentes.length === 0 && (
-                  <div className="rounded-2xl bg-white/10 p-8 text-center">
-                    <CheckCircle2 className="size-10 text-white/70 mx-auto mb-3" />
-                    <h3 className="text-white text-lg font-semibold mb-1">
+                  <div className="rounded-xl bg-white/10 p-5 text-center sm:p-6">
+                    <CheckCircle2 className="size-8 text-emerald-300 mx-auto mb-2" />
+                    <h3 className="text-white text-base font-semibold mb-1">
                       Nenhuma pendência
                     </h3>
-                    <p className="text-white/70">
+                    <p className="text-white/65 text-sm">
                       Todos os certificados e relatórios já foram avaliados.
                     </p>
                   </div>
@@ -447,13 +496,13 @@ export default function DashboardCoordenacao() {
             {aba === "historico" && (
               <>
                 {loadingHistorico && (
-                  <div className="rounded-2xl bg-white/10 p-8 text-center">
+                  <div className="rounded-xl bg-white/10 p-5 text-center sm:p-6">
                     <p className="text-white/70">Carregando histórico...</p>
                   </div>
                 )}
 
                 {!loadingHistorico && historico.length === 0 && (
-                  <div className="rounded-2xl bg-white/10 p-8 text-center">
+                  <div className="rounded-xl bg-white/10 p-5 text-center sm:p-6">
                     <History className="size-10 text-white/70 mx-auto mb-3" />
                     <h3 className="text-white text-lg font-semibold mb-1">
                       Nenhuma validação registrada
