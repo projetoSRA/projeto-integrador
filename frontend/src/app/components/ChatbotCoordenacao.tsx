@@ -76,7 +76,7 @@ export default function ChatbotCoordenacao() {
       <button
         type="button"
         onClick={() => setAberto((v) => !v)}
-        className="fixed bottom-5 right-5 z-40 flex items-center justify-center size-14 rounded-full bg-blue-500 hover:bg-blue-600 shadow-[0_10px_30px_rgba(37,99,235,0.5)] transition"
+        className="fixed bottom-24 right-4 z-[95] flex size-12 items-center justify-center rounded-full bg-blue-500 shadow-[0_10px_30px_rgba(37,99,235,0.45)] transition hover:bg-blue-600 lg:bottom-5 lg:right-5 lg:size-14"
         aria-label={aberto ? "Fechar assistente" : "Abrir assistente"}
       >
         {aberto ? (
@@ -88,7 +88,7 @@ export default function ChatbotCoordenacao() {
 
       {aberto && (
         <div
-          className="fixed bottom-24 right-5 z-40 w-[92vw] max-w-sm h-[70vh] max-h-[560px] rounded-2xl flex flex-col overflow-hidden shadow-2xl"
+          className="fixed bottom-40 right-3 z-[95] flex h-[65dvh] max-h-[560px] w-[calc(100vw-1.5rem)] max-w-sm flex-col overflow-hidden rounded-2xl shadow-2xl lg:bottom-24 lg:right-5 lg:h-[70vh] lg:w-[92vw]"
           style={panelStyle}
         >
           <div className="flex items-center gap-2 p-4 border-b border-white/10">
