@@ -1,4 +1,4 @@
-import { ReactNode, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router";
 import { Button } from "./ui/button";
 import { User } from "../utils/auth";
@@ -42,8 +42,27 @@ export default function AlunoLayout({
   const [fotoPerfil, setFotoPerfil] = useState(user.foto_perfil_url || "");
   const [enviandoFoto, setEnviandoFoto] = useState(false);
   const [menuMolduraAberto, setMenuMolduraAberto] = useState(false);
+  const [infoAberto, setInfoAberto] = useState(false);
+  const infoRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!infoAberto) {
+      setMenuMolduraAberto(false);
+      return;
+    }
+
+    function handleClickFora(event: MouseEvent) {
+      if (infoRef.current && !infoRef.current.contains(event.target as Node)) {
+        setInfoAberto(false);
+      }
+    }
+
+    document.addEventListener("mousedown", handleClickFora);
+    return () => document.removeEventListener("mousedown", handleClickFora);
+  }, [infoAberto]);
 
   const handleLogout = () => {
+    setInfoAberto(false);
     setModalSair(true);
   };
 
@@ -144,7 +163,7 @@ export default function AlunoLayout({
 
       <div className="relative flex flex-col lg:flex-row h-full gap-4 lg:gap-10">
         <aside
-          className="order-2 lg:order-1 w-full lg:w-80 lg:shrink-0 lg:min-h-full p-4 sm:p-6 flex flex-col justify-between rounded-2xl"
+          className="hidden lg:flex lg:order-1 lg:w-80 lg:shrink-0 lg:min-h-full p-4 sm:p-6 flex-col justify-between rounded-2xl"
           style={panelStyle}
         >
           <div>
@@ -265,19 +284,162 @@ export default function AlunoLayout({
             "
           >
             <header
-              className="flex flex-col lg:flex-row lg:items-center gap-4 mb-8 p-4 sm:p-6 rounded-2xl"
+              className="relative z-20 flex flex-col lg:flex-row lg:items-center gap-4 mb-8 p-4 sm:p-6 rounded-2xl"
               style={panelStyle}
             >
-              <div className="w-full lg:w-auto flex items-center gap-4 shrink-0">
-                <GraduationCap className="size-9 text-blue-400 shrink-0" />
+              <div className="w-full lg:w-auto flex items-center gap-3 sm:gap-4 shrink-0">
+                <div className="relative lg:hidden" ref={infoRef}>
+                  <button
+                    type="button"
+                    onClick={() => setInfoAberto((v) => !v)}
+                    className={`w-11 h-11 rounded-full overflow-hidden border-4 cursor-pointer transition hover:scale-105 shrink-0 ${
+                      molduras[moldura as keyof typeof molduras]
+                    }`}
+                    title="Minhas informações"
+                  >
+                    <img
+                      src={fotoPerfil}
+                      alt="Foto do aluno"
+                      className="w-full h-full object-cover"
+                    />
+                  </button>
+
+                  {infoAberto && (
+                    <div
+                      className="absolute left-0 top-full mt-3 z-50 w-72 max-w-[calc(100vw-2rem)] rounded-2xl p-5 shadow-2xl border border-white/10 bg-[#0b0d14] max-h-[75vh] overflow-y-auto"
+                    >
+                      <h2 className="text-xl font-semibold text-white mb-5">
+                        Minhas Informações
+                      </h2>
+
+                      <div className="flex flex-col items-center mb-5">
+                        <div className="relative">
+                          <div
+                            onClick={() => setMenuMolduraAberto(!menuMolduraAberto)}
+                            className={`w-24 h-24 rounded-full overflow-hidden border-4 cursor-pointer transition ${
+                              molduras[moldura as keyof typeof molduras]
+                            }`}
+                          >
+                            <img
+                              src={fotoPerfil}
+                              alt="Foto do aluno"
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+
+                          <label className="absolute bottom-1 right-1 bg-black/70 hover:bg-black/80 transition p-2 rounded-full cursor-pointer">
+                            <Camera className="size-4 text-white" />
+                            <input
+                              type="file"
+                              accept="image/*"
+                              onChange={trocarFotoPerfil}
+                              className="hidden"
+                              disabled={enviandoFoto}
+                            />
+                          </label>
+
+                          {menuMolduraAberto && (
+                            <div className="absolute top-28 left-1/2 -translate-x-1/2 bg-[#0b0d14] border border-white/10 rounded-xl p-3 flex gap-2 shadow-2xl z-50">
+                              {Object.entries(molduras).map(([nome, classe]) => (
+                                <button
+                                  key={nome}
+                                  type="button"
+                                  onClick={() => {
+                                    setMoldura(nome);
+                                    localStorage.setItem(
+                                      `moldura_aluno_${user.id}`,
+                                      nome
+                                    );
+                                    setMenuMolduraAberto(false);
+                                  }}
+                                  className={`w-8 h-8 rounded-full border-2 transition hover:scale-110 ${
+                                    moldura === nome
+                                      ? "scale-110 ring-2 ring-white/70"
+                                      : ""
+                                  } ${classe}`}
+                                  title={`Moldura ${nome}`}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-white mb-2 text-base">
+                        <strong>Nome:</strong> {user.name}
+                      </p>
+
+                      <p className="text-white mb-4 text-base">
+                        <strong>
+                          {user.nivel_ensino === "FACULDADE" ? "RA:" : "RM:"}
+                        </strong>{" "}
+                        {user.identifier}
+                      </p>
+
+                      <p className="text-white mb-5 text-base">
+                        <strong>Curso:</strong> {user.curso || "Não informado"}
+                        {user.serie_semestre ? ` · ${user.serie_semestre}` : ""}
+                      </p>
+
+                      <div className="space-y-3 mb-6">
+                        <div className="flex justify-between bg-white/10 p-3 rounded-xl text-white">
+                          <span>Status</span>
+                          <span className="font-semibold text-blue-400">Ativo</span>
+                        </div>
+
+                        {certificados !== undefined && (
+                          <div className="flex justify-between bg-white/10 p-3 rounded-xl text-white">
+                            <span>Certificados</span>
+                            <span className="font-semibold">{certificados}</span>
+                          </div>
+                        )}
+
+                        {relatorios !== undefined && (
+                          <div className="flex justify-between bg-white/10 p-3 rounded-xl text-white">
+                            <span>Relatórios</span>
+                            <span className="font-semibold">{relatorios}</span>
+                          </div>
+                        )}
+
+                        <div className="flex justify-between bg-white/10 p-3 rounded-xl text-white">
+                          <span>Horas</span>
+                          <span className="font-semibold">{horas}h</span>
+                        </div>
+
+                        <div className="flex justify-between bg-white/10 p-3 rounded-xl text-white">
+                          <span>Ano</span>
+                          <span className="font-semibold">1º ADS</span>
+                        </div>
+                      </div>
+
+                      <Button
+                        onClick={handleLogout}
+                        className="w-full h-12 flex items-center justify-center gap-2 rounded-xl text-white bg-white/10 hover:bg-white/15 border border-white/10"
+                      >
+                        <LogOut className="size-4" />
+                        Sair
+                      </Button>
+                    </div>
+                  )}
+                </div>
+
+                <GraduationCap className="hidden lg:block size-9 text-blue-400 shrink-0" />
                 <div>
-                  <h1 className="text-2xl sm:text-3xl font-semibold text-white whitespace-nowrap">
+                  <h1 className="text-xl sm:text-2xl lg:text-3xl font-semibold text-white whitespace-nowrap">
                     Central SRA
                   </h1>
-                  <p className="text-white/70 text-sm sm:text-base">
+                  <p className="hidden lg:block text-white/70 text-sm sm:text-base">
                     Bem-vindo(a), {user.name}
                   </p>
                 </div>
+
+                <button
+                  onClick={() => navigate("/configuracoes")}
+                  className="lg:hidden ml-auto p-3 rounded-xl bg-white/10 hover:bg-white/15 transition hover:rotate-90 duration-300 shrink-0"
+                  type="button"
+                >
+                  <Settings className="size-6 text-white" />
+                </button>
               </div>
 
               <div className="w-full lg:flex-1 flex flex-wrap justify-start lg:justify-center gap-x-4 gap-y-2 sm:gap-x-6 lg:gap-x-8">
@@ -310,7 +472,7 @@ export default function AlunoLayout({
                 </button>
               </div>
 
-              <div className="w-full lg:w-auto flex justify-end shrink-0">
+              <div className="hidden lg:flex lg:w-auto justify-end shrink-0">
                 <button
                   onClick={() => navigate("/configuracoes")}
                   className="p-3 rounded-xl bg-white/10 hover:bg-white/15 transition hover:rotate-90 duration-300"
